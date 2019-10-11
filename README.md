@@ -1,0 +1,30 @@
+# Preliminary results
+The amount of time taken to construct a tree grows wrt number of trees in a forest since the implementation uses a for loop
+```
+(base) Violets-MacBook-Pro:math60607 vikuo$ python tree.py
+--- 0.12336206436157227 seconds ---
+--- 0.12372374534606934 seconds ---
+--- 0.1255931854248047 seconds ---
+--- 0.1471858024597168 seconds ---
+--- 0.12482881546020508 seconds ---
+Trees: 1
+Scores: [56.09756097560976, 63.41463414634146, 60.97560975609756, 58.536585365853654, 73.17073170731707]
+Mean Accuracy: 62.439%
+--- 0.6273660659790039 seconds ---
+--- 0.5815448760986328 seconds ---
+--- 0.6488070487976074 seconds ---
+--- 0.6652359962463379 seconds ---
+--- 0.6279010772705078 seconds ---
+Trees: 5
+Scores: [70.73170731707317, 58.536585365853654, 85.36585365853658, 75.60975609756098, 63.41463414634146]
+Mean Accuracy: 70.732%
+--- 1.2086970806121826 seconds ---
+--- 1.245736837387085 seconds ---
+--- 1.275620937347412 seconds ---
+--- 1.1967086791992188 seconds ---
+--- 1.2417962551116943 seconds ---
+Trees: 10
+Scores: [75.60975609756098, 80.48780487804879, 92.6829268292683, 73.17073170731707, 70.73170731707317]
+Mean Accuracy: 78.537%
+```
+
