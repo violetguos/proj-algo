@@ -10,6 +10,12 @@ import time
 # with GINI index. I added some performance benchmark and indentified where we should
 # try the. multi threading
 
+from multiprocessing.pool import Pool
+
+import threading
+import time
+
+
 
 # Load a CSV file
 def load_csv(filename):
@@ -191,6 +197,50 @@ def bagging_predict(trees, row):
  
 # Random Forest Algorithm
 def random_forest(train, test, max_depth, min_size, sample_size, n_trees, n_features):
+	pool = Pool(processes=4)
+
+	trees = list()
+	start_time = time.time()
+	async_result = list()
+	# TODO: replace this loop with threads
+	for i in range(n_trees):
+		sample = subsample(train, sample_size)
+		res = pool.apply_async(build_tree, (sample, max_depth, min_size, n_features))
+		async_result.append(res)
+
+
+	return_val = [res.get(timeout=1) for res in async_result]
+
+	trees = return_val
+
+
+	# trees = []
+	# for i in range(n_trees):
+
+	# 	sample = subsample(train, sample_size)
+	# 	tree = build_tree(sample, max_depth, min_size, n_features)
+	# 	trees.append(tree)
+	#predictions = [bagging_predict(trees, row) for row in test]
+
+
+	predictions = [bagging_predict(trees, row) for row in test]
+
+
+	print("--- %s seconds ---" % (time.time() - start_time))
+
+
+
+	return predictions
+	# for i in range(n_trees):
+
+	# 	sample = subsample(train, sample_size)
+	# 	tree = build_tree(sample, max_depth, min_size, n_features)
+	# 	trees.append(tree)
+	# predictions = [bagging_predict(trees, row) for row in test]
+
+	# return(predictions)
+
+def random_forest_seq(train, test, max_depth, min_size, sample_size, n_trees, n_features):
 	trees = list()
 	start_time = time.time()
 	# TODO: replace this loop with threads
@@ -202,7 +252,7 @@ def random_forest(train, test, max_depth, min_size, sample_size, n_trees, n_feat
 	print("--- %s seconds ---" % (time.time() - start_time))
 
 	return(predictions)
- 
+
 # Test the random forest algorithm
 seed(2)
 # load and prepare data
@@ -219,8 +269,9 @@ max_depth = 10
 min_size = 1
 sample_size = 1.0
 n_features = int(sqrt(len(dataset[0])-1))
-for n_trees in [1, 5, 10]:
-	scores = evaluate_algorithm(dataset, random_forest, n_folds, max_depth, min_size, sample_size, n_trees, n_features)
+
+for n_trees in [30, 50]:
+	scores = evaluate_algorithm(dataset, random_forest_seq, n_folds, max_depth, min_size, sample_size, n_trees, n_features)
 	print('Trees: %d' % n_trees)
 	print('Scores: %s' % scores)
 	print('Mean Accuracy: %.3f%%' % (sum(scores)/float(len(scores))))
