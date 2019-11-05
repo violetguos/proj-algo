@@ -1,3 +1,13 @@
+#  TODOs
+functions to port in NB
+
+- [ ] `split_train_test`
+- [ ] `variance_SSR`
+- [ ] `variance_SSR_max`
+- [ ] `gini`
+- [ ] `entropy`
+- [ ] `cat_split`
+
 # Preliminary results
 The amount of time taken to construct a tree grows wrt number of trees in a forest since the implementation uses a for loop
 ```
