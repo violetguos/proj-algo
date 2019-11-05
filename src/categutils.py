@@ -3,9 +3,14 @@
 import pandas as pd # to read the csv
 import random # generate random numbers for train test split
 import math # to calculate log2 probabilities
+import numpy as np
 
-def read_pd(fp="winequality-red.csv"):
-    df = pd.read_csv(fp, sep=';')
+def read_pd(fp):
+    df = pd.read_csv(fp)
+    df.head()
+    df = df.replace('setosa', 0.0)
+    df = df.replace('versicolor', 1.0)
+    df = df.replace('virginica', 2.0)
     return df
 
 def split_train_test(df, train=0.60):
@@ -15,77 +20,7 @@ def split_train_test(df, train=0.60):
     test_df = df.loc[set(df.index) - set(train_df.index)] #get rest of index
     return train_df, test_df
 
-######## For continuous ##########
-class ContinousUtil:
-    @staticmethod
-    def variance_SSR(df, feature, split, target):
-        """
-        for continuous target
-        Split criteria based on reduction of variance (so maximising SSR)
-        attention group 1 is <= split !!!
-        :param df:
-        :param feature:
-        :param split:
-        :param target:
-        :return:
-        """
-        mean_target_group1 = df[df[feature]<=split][target].mean()
-        len_group1 = sum(df[feature]<=split)
-        mean_target_group2 = df[df[feature]>split][target].mean()
-        len_group2 = len(df.index) - len_group1
-        mean = df[target].mean()
-        variance_SSR = len_group1 * (mean_target_group1 - mean)**2 + len_group2 * (mean_target_group2 - mean)**2
-        return variance_SSR
 
-    @staticmethod
-    def variance_SSR_max(df, feature, target):
-        """
-        Alternate function, find max of SSR for all possible splits for a specific variable
-        :param df:
-        :param feature:
-        :param target:
-        :return:
-        """
-        splits = df[feature].unique() # all possible splits are all unique values, except the first value
-        max_SSR = 0
-        mean = df[target].mean()
-        for split in splits[1:]: # We have to exclude the first value as split is <=
-            mean_target_group1 = df[df[feature]<=split][target].mean()
-            mean_target_group2 = df[df[feature]>split][target].mean()
-            len_group1 = sum(df[feature]<=split)
-            len_group2 = len(df.index) - len_group1
-            variance_SSR = len_group1 * (mean_target_group1 - mean)**2 + len_group2 * (mean_target_group2 - mean)**2
-            if variance_SSR > max_SSR:
-                best_split = split
-                max_SSR=variance_SSR
-        return best_split
-
-    @staticmethod
-    def variance_SSR_max(df, target):
-        """
-        Alternate function to find the best split out of all possible splits (so for all variables):
-
-        :param df:
-        :param target:
-        :return:
-        """
-        max_SSR = 0
-        for column in df:
-            if column == 'quality': # We can't splt on the target variable
-                continue
-            splits = df[column].unique() # Possible splits are all the unique values, except the last value (because of <=)
-            mean = df[column].mean()
-            for split in splits[:-1]: # We have to exclude the last value as split
-                mean_target_group1 = df[df[column]<=split][target].mean()
-                mean_target_group2 = df[df[column]>split][target].mean()
-                len_group1 = sum(df[column]<=split)
-                len_group2 = len(df.index) - len_group1
-                variance_SSR = len_group1 * (mean_target_group1 - mean)**2 + len_group2 * (mean_target_group2 - mean)**2
-                if variance_SSR > max_SSR:
-                    best_split = split
-                    max_SSR = variance_SSR
-                    best_column = column
-        return best_split, best_column
 
 class CategoricalUtil:
 
@@ -150,7 +85,7 @@ class CategoricalUtil:
             yield [categories]
         else:
             first = categories[0]
-            for next_one in cat_split(categories[1:]):  # need to exclude first category, as stored in 'first'
+            for next_one in CategoricalUtil.cat_split(categories[1:]):  # need to exclude first category, as stored in 'first'
                 for i, subset in enumerate(next_one):
                     yield next_one[:i] + [[first] + subset] + next_one[i + 1:]
                 yield [[first]] + next_one

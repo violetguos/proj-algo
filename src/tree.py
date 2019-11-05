@@ -5,7 +5,8 @@ from random import randrange
 from math import sqrt
 import time
 from multiprocessing.pool import Pool
-from proj import contiutils as dut
+from src import categutils as cat_util
+from src import commons as dut
 
 
 class Tree:
@@ -124,6 +125,8 @@ class Forest:
         self.max_depth = 10
         self.min_size = 1
         self.dataset = data
+        # self.train_data = train_data
+        # self.test_data = test_data
 
     def predict(self, model):
         pass
@@ -131,21 +134,13 @@ class Forest:
 
 
     def evaluate_algorithm(self, *args):
-        folds = dut.cross_validation_split(self.dataset, self.n_folds)
-        scores = list()
-        for fold in folds:
-            train_set = list(folds)
-            train_set.remove(fold)
-            train_set = sum(train_set, [])
-            test_set = list()
-            for row in fold:
-                row_copy = list(row)
-                test_set.append(row_copy)
-                row_copy[-1] = None
-            predicted = self.random_forest_seq(train_set, test_set, *args)
-            actual = [row[-1] for row in fold]
-            accuracy = dut.accuracy_metric(actual, predicted)
-            scores.append(accuracy)
+        scores = []
+        print("line 137")
+
+        predicted = self.random_forest(*args)
+        actual = [row[-1] for row in self.dataset]
+        accuracy = dut.accuracy_metric(actual, predicted)
+        scores.append(accuracy)
         return scores
 
 
@@ -159,7 +154,7 @@ class Forest:
 
     # Random Forest Algorithm
     def random_forest(
-        self, train, test, max_depth, min_size, sample_size, n_trees, n_features
+        self, max_depth, min_size, sample_size, n_trees, n_features
     ):
         pool = Pool(processes=4)
 
@@ -168,7 +163,7 @@ class Forest:
         async_result = list()
         # TODO: replace this loop with threads
         for i in range(n_trees):
-            sample = dut.subsample( train, sample_size)
+            sample = dut.subsample(self.dataset, sample_size)
             t = Tree()
             res = pool.apply_async(
                 t.build_tree, (sample, max_depth, min_size, n_features)
@@ -178,32 +173,25 @@ class Forest:
         return_val = [res.get(timeout=1) for res in async_result]
         trees = return_val
 
-        # trees = []
-        # for i in range(n_trees):
 
-        #   sample = subsample(train, sample_size)
-        #   tree = build_tree(sample, max_depth, min_size, n_features)
-        #   trees.append(tree)
-        # predictions = [bagging_predict(trees, row) for row in test]
-
-        predictions = [self.bagging_predict(trees, row) for row in test]
+        predictions = [self.bagging_predict(trees, row) for row in self.dataset]
         print("--- %s seconds ---" % (time.time() - start_time))
         return predictions
 
 
     def random_forest_seq(
-        self,train, test, max_depth, min_size, sample_size, n_trees, n_features
+        self, max_depth, min_size, sample_size, n_trees, n_features
     ):
         # TODO:add the tress list to self param
         trees = list()
         start_time = time.time()
         # TODO: replace this loop with threads
         for i in range(n_trees):
-            sample = dut.subsample(train, sample_size)
+            sample = dut.subsample(self.dataset, sample_size)
             t = Tree()
             tree = t.build_tree(sample, max_depth, min_size, n_features)
             trees.append(tree)
-        predictions = [self.bagging_predict(trees, row) for row in test]
+        predictions = [self.bagging_predict(trees, row) for row in self.dataset]
         print("--- %s seconds ---" % (time.time() - start_time))
 
         return predictions
@@ -213,21 +201,24 @@ def main():
     # Test the random forest algorithm
     seed(2)
     # load and prepare data
-    filename = "sonar.all-data.csv"
-    dataset = dut.load_csv(filename)
-    # convert string attributes to integers
-    for i in range(0, len(dataset[0]) - 1):
-        dut.str_column_to_float(dataset, i)
-    # convert class column to integers
-    dut.str_column_to_int(dataset, len(dataset[0]) - 1)
+    filename = "../data/iris_data.csv"
+    dataset = cat_util.read_pd(filename)
+
+    # t1, t2 = cat_util.split_train_test(dataset)
+    #
+    # train_data = t1.values
+    # test_data = t2.values
+    #
     # evaluate algorithm
     n_folds = 5
     max_depth = 10
     min_size = 1
     sample_size = 1.0
-    n_features = int(sqrt(len(dataset[0]) - 1))
-    optim = Forest(dataset)
-    for n_trees in [30, 50]:
+    n_features = 4 # 4 for iris
+    x = dataset.values
+    print(type(x))
+    optim = Forest(dataset.values)
+    for n_trees in [10, 20]:
         scores = optim.evaluate_algorithm(
             max_depth,
             min_size,
