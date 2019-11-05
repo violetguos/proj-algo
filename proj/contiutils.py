@@ -1,3 +1,4 @@
+# utility functions that will  be phased out
 from csv import reader
 from random import randrange
 

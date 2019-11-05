@@ -1,10 +1,12 @@
 # Random Forest Algorithm on Sonar Dataset
+# this will be cleaned down to only forest definition
 from random import seed
 from random import randrange
 from math import sqrt
 import time
 from multiprocessing.pool import Pool
-import datautils as dut
+from proj import contiutils as dut
+
 
 class Tree:
     def __init__(self):
