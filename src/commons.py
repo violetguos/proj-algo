@@ -49,12 +49,6 @@ def cross_validation_split(dataset, n_folds):
 # Calculate accuracy percentage
 def accuracy_metric(actual, predicted):
     correct = 0
-    print("*"*20)
-    print("actual")
-    print(actual)
-    print("*"*20)
-    print("predicted")
-    print(predicted)
     for i in range(len(actual)):
         if actual[i] == predicted[i]:
             correct += 1

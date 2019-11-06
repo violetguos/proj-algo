@@ -120,25 +120,28 @@ class Tree:
 
 
 class Forest:
-    def __init__(self, data):
+    def __init__(self, train_data, test_data):
         self.n_folds = 5
         self.max_depth = 10
         self.min_size = 1
-        self.dataset = data
-        # self.train_data = train_data
-        # self.test_data = test_data
+        # self.dataset = data
+        self.train_data = train_data
+        self.test_data = test_data
 
     def predict(self, model):
         pass
 
 
 
-    def evaluate_algorithm(self, *args):
+    def evaluate_algorithm(self, parallel, *args):
         scores = []
-        print("line 137")
-
-        predicted = self.random_forest(*args)
-        actual = [row[-1] for row in self.dataset]
+        if parallel is False:
+            print("Test sequential")
+            predicted = self.random_forest_seq(*args)
+        else:
+            print("Test parallel")
+            predicted = self.random_forest(*args)
+        actual = [row[-1] for row in self.test_data]
         accuracy = dut.accuracy_metric(actual, predicted)
         scores.append(accuracy)
         return scores
@@ -161,9 +164,8 @@ class Forest:
         trees = list()
         start_time = time.time()
         async_result = list()
-        # TODO: replace this loop with threads
         for i in range(n_trees):
-            sample = dut.subsample(self.dataset, sample_size)
+            sample = dut.subsample(self.train_data, sample_size)
             t = Tree()
             res = pool.apply_async(
                 t.build_tree, (sample, max_depth, min_size, n_features)
@@ -174,7 +176,7 @@ class Forest:
         trees = return_val
 
 
-        predictions = [self.bagging_predict(trees, row) for row in self.dataset]
+        predictions = [self.bagging_predict(trees, row) for row in self.test_data]
         print("--- %s seconds ---" % (time.time() - start_time))
         return predictions
 
@@ -187,11 +189,11 @@ class Forest:
         start_time = time.time()
         # TODO: replace this loop with threads
         for i in range(n_trees):
-            sample = dut.subsample(self.dataset, sample_size)
+            sample = dut.subsample(self.train_data, sample_size)
             t = Tree()
             tree = t.build_tree(sample, max_depth, min_size, n_features)
             trees.append(tree)
-        predictions = [self.bagging_predict(trees, row) for row in self.dataset]
+        predictions = [self.bagging_predict(trees, row) for row in self.test_data]
         print("--- %s seconds ---" % (time.time() - start_time))
 
         return predictions
@@ -204,10 +206,10 @@ def main():
     filename = "../data/iris_data.csv"
     dataset = cat_util.read_pd(filename)
 
-    # t1, t2 = cat_util.split_train_test(dataset)
-    #
-    # train_data = t1.values
-    # test_data = t2.values
+    t1, t2 = cat_util.split_train_test(dataset)
+
+    train_data = t1.values
+    test_data = t2.values
     #
     # evaluate algorithm
     n_folds = 5
@@ -217,9 +219,23 @@ def main():
     n_features = 4 # 4 for iris
     x = dataset.values
     print(type(x))
-    optim = Forest(dataset.values)
-    for n_trees in [10, 20]:
+    optim = Forest(train_data, test_data)
+    for n_trees in [30, 50]:
         scores = optim.evaluate_algorithm(
+            False, # seq
+            max_depth,
+            min_size,
+            sample_size,
+            n_trees,
+            n_features,
+        )
+        print("Trees: %d" % n_trees)
+        print("Scores: %s" % scores)
+        print("Mean Accuracy: %.3f%%" % (sum(scores) / float(len(scores))))
+
+    for n_trees in [30, 50]:
+        scores = optim.evaluate_algorithm(
+            True, # seq
             max_depth,
             min_size,
             sample_size,
