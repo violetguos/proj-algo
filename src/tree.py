@@ -11,7 +11,9 @@ import pandas as pd
 
 class Node:
     def __init__(self, val):
-        self.val = val
+        self.index = val["index"]
+        self.groups = val["groups"]
+        self.value = val["value"]
 
 class Tree:
     def __init__(self):
@@ -81,16 +83,16 @@ class Tree:
 
     # Make a prediction with a decision tree
     def predict(self, node, row):
-        if row[node.val["index"]] < node.val["value"]:
-            if isinstance(node.val["left"], Node):
-                return self.predict(node.val["left"], row)
+        if row[node.index] < node.value:
+            if isinstance(node.left, Node):
+                return self.predict(node.left, row)
             else:
-                return node.val["left"]
+                return node.left
         else:
-            if isinstance(node.val["right"], Node):
-                return self.predict(node.val["right"], row)
+            if isinstance(node.right, Node):
+                return self.predict(node.right, row)
             else:
-                return node.val["right"]
+                return node.right
 
 
     # Create a terminal node value
@@ -101,28 +103,28 @@ class Tree:
 
     # Create child splits for a node or make terminal
     def split(self, node, max_depth, min_size, n_features, depth):
-        left, right = node.val["groups"]
-        del (node.val["groups"])
+        left, right = node.groups
+        del (node.groups)
         # check for a no split
         if not left or not right:
-            node.val["left"] = node.val["right"] = self.to_terminal(left + right)
+            node.left = node.right = self.to_terminal(left + right)
             return
             # check for max depth
         if depth >= max_depth:
-            node.val["left"], node.val["right"] = self.to_terminal(left), self.to_terminal(right)
+            node.left, node.right = self.to_terminal(left), self.to_terminal(right)
             return
             # process left child
         if len(left) <= min_size:
-            node.val["left"] = self.to_terminal(left)
+            node.left = self.to_terminal(left)
         else:
-            node.val["left"] = self.get_split(left, n_features)
-            self.split(node.val["left"], max_depth, min_size, n_features, depth + 1)
+            node.left = self.get_split(left, n_features)
+            self.split(node.left, max_depth, min_size, n_features, depth + 1)
             # process right child
         if len(right) <= min_size:
-            node.val["right"] = self.to_terminal(right)
+            node.right = self.to_terminal(right)
         else:
-            node.val["right"] = self.get_split(right, n_features)
-            self.split(node.val["right"], max_depth, min_size, n_features, depth + 1)
+            node.right = self.get_split(right, n_features)
+            self.split(node.right, max_depth, min_size, n_features, depth + 1)
 
 
     # Build a decision tree
@@ -199,7 +201,7 @@ class Forest:
             t = Tree()
             tree = t.build_tree(sample, max_depth, min_size, n_features)
             print("*"*20)
-            print(tree.val)
+            print(tree)
             print("*"*20)
             trees.append(tree)
         predictions = [self.bagging_predict(trees, row) for row in self.test_data]
