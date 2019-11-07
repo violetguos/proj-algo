@@ -7,7 +7,7 @@ import time
 from multiprocessing.pool import Pool
 from src import categutils as cat_util
 from src import commons as dut
-
+import pandas as pd
 
 class Tree:
     def __init__(self):
@@ -25,6 +25,10 @@ class Tree:
 
     # Calculate the Gini index for a split dataset
     def gini_index(self, groups, classes):
+        # NOTE: this is before cleaning
+        # new updated function is in categutils.py
+
+
         # count all samples at split point
         n_instances = float(sum([len(group) for group in groups]))
         # sum weighted Gini index for each group
@@ -35,6 +39,7 @@ class Tree:
             if size == 0:
                 continue
             score = 0.0
+            # TODO add the gini index helper from C here
             # score the group based on the score for each class
             for class_val in classes:
                 p = [row[-1] for row in group].count(class_val) / size
@@ -45,7 +50,9 @@ class Tree:
 
     # Select the best split point for a dataset
     def get_split(self, dataset, n_features):
+        #TODO: use C's imp
         class_values = list(set(row[-1] for row in dataset))
+        # depends whether subset data, this could be subset of 0,1,2
         b_index, b_value, b_score, b_groups = 999, 999, 999, None
         features = list()
         while len(features) < n_features:
@@ -54,8 +61,11 @@ class Tree:
                 features.append(index)
         for index in features:
             for row in dataset:
+                # row[index] is the threshold value?
                 groups = self.test_split(index, row[index], dataset)
-                gini = self.gini_index(groups, class_values)
+                #print(groups)
+                # self.gini_index(groups, class_values)
+                gini = cat_util.CategoricalUtil.gini(groups, class_values)
                 if gini < b_score:
                     b_index, b_value, b_score, b_groups = (
                         index,
@@ -131,8 +141,6 @@ class Forest:
     def predict(self, model):
         pass
 
-
-
     def evaluate_algorithm(self, parallel, *args):
         scores = []
         if parallel is False:
@@ -146,14 +154,11 @@ class Forest:
         scores.append(accuracy)
         return scores
 
-
     # Make a prediction with a list of bagged trees
     def bagging_predict(self, trees, row):
-        # TODO: use threads for each tree's result
         t = Tree()
         predictions = [t.predict(tree, row) for tree in trees]
         return max(set(predictions), key=predictions.count)
-
 
     # Random Forest Algorithm
     def random_forest(
@@ -180,14 +185,12 @@ class Forest:
         print("--- %s seconds ---" % (time.time() - start_time))
         return predictions
 
-
     def random_forest_seq(
         self, max_depth, min_size, sample_size, n_trees, n_features
     ):
         # TODO:add the tress list to self param
         trees = list()
         start_time = time.time()
-        # TODO: replace this loop with threads
         for i in range(n_trees):
             sample = dut.subsample(self.train_data, sample_size)
             t = Tree()
@@ -195,7 +198,6 @@ class Forest:
             trees.append(tree)
         predictions = [self.bagging_predict(trees, row) for row in self.test_data]
         print("--- %s seconds ---" % (time.time() - start_time))
-
         return predictions
 
 
@@ -233,19 +235,19 @@ def main():
         print("Scores: %s" % scores)
         print("Mean Accuracy: %.3f%%" % (sum(scores) / float(len(scores))))
 
-    for n_trees in [30, 50]:
-        scores = optim.evaluate_algorithm(
-            True, # seq
-            max_depth,
-            min_size,
-            sample_size,
-            n_trees,
-            n_features,
-        )
-        print("Trees: %d" % n_trees)
-        print("Scores: %s" % scores)
-        print("Mean Accuracy: %.3f%%" % (sum(scores) / float(len(scores))))
-
+    # for n_trees in [30, 50]:
+    #     scores = optim.evaluate_algorithm(
+    #         True, # parallel
+    #         max_depth,
+    #         min_size,
+    #         sample_size,
+    #         n_trees,
+    #         n_features,
+    #     )
+    #     print("Trees: %d" % n_trees)
+    #     print("Scores: %s" % scores)
+    #     print("Mean Accuracy: %.3f%%" % (sum(scores) / float(len(scores))))
+    #
 
 if __name__ == '__main__':
     main()

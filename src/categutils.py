@@ -37,14 +37,24 @@ class CategoricalUtil:
 
     # Gini function
     @staticmethod
-    def gini(df, target):
-        categories = df[target].unique()
+    def gini(df, categories):
+        # most up to date gini function used in training
+        # categories = df[target].unique()
+        total_rows = float(sum([len(subtree) for subtree in df]))
+
         pk = []
-        i = 0
-        for category in categories:
-            pk.append(sum(df[target] == category) / len(df))  # Find proportion in each class
-            i = i + 1
-        return 1 - sum([p ** 2 for p in pk])  # Return gini
+        score = 0
+        for subtree in df:
+            # only 2. either left or right
+            for category in categories:
+                sum_cat = 0.0
+                if len(subtree) > 0:
+                    for row in subtree:
+                        if row[-1] == category:
+                            sum_cat += 1
+                    pk.append(sum_cat/len(subtree))  # Find proportion in each class
+            score += (1-sum([p ** 2 for p in pk])) * (len(subtree)/ total_rows)
+        return score
 
     # Entropy function
     @staticmethod
