@@ -9,6 +9,10 @@ from src import categutils as cat_util
 from src import commons as dut
 import pandas as pd
 
+class Node:
+    def __init__(self, val):
+        self.val = val
+
 class Tree:
     def __init__(self):
         self.feature = 1
@@ -27,7 +31,6 @@ class Tree:
     def gini_index(self, groups, classes):
         # NOTE: this is before cleaning
         # new updated function is in categutils.py
-
 
         # count all samples at split point
         n_instances = float(sum([len(group) for group in groups]))
@@ -63,7 +66,7 @@ class Tree:
             for row in dataset:
                 # row[index] is the threshold value?
                 groups = self.test_split(index, row[index], dataset)
-                #print(groups)
+                # print(groups)
                 # self.gini_index(groups, class_values)
                 gini = cat_util.CategoricalUtil.gini(groups, class_values)
                 if gini < b_score:
@@ -73,21 +76,21 @@ class Tree:
                         gini,
                         groups,
                     )
-        return {"index": b_index, "value": b_value, "groups": b_groups}
+        return Node({"index": b_index, "value": b_value, "groups": b_groups})
 
 
     # Make a prediction with a decision tree
     def predict(self, node, row):
-        if row[node["index"]] < node["value"]:
-            if isinstance(node["left"], dict):
-                return self.predict(node["left"], row)
+        if row[node.val["index"]] < node.val["value"]:
+            if isinstance(node.val["left"], Node):
+                return self.predict(node.val["left"], row)
             else:
-                return node["left"]
+                return node.val["left"]
         else:
-            if isinstance(node["right"], dict):
-                return self.predict(node["right"], row)
+            if isinstance(node.val["right"], Node):
+                return self.predict(node.val["right"], row)
             else:
-                return node["right"]
+                return node.val["right"]
 
 
     # Create a terminal node value
@@ -98,28 +101,28 @@ class Tree:
 
     # Create child splits for a node or make terminal
     def split(self, node, max_depth, min_size, n_features, depth):
-        left, right = node["groups"]
-        del (node["groups"])
+        left, right = node.val["groups"]
+        del (node.val["groups"])
         # check for a no split
         if not left or not right:
-            node["left"] = node["right"] = self.to_terminal(left + right)
+            node.val["left"] = node.val["right"] = self.to_terminal(left + right)
             return
             # check for max depth
         if depth >= max_depth:
-            node["left"], node["right"] = self.to_terminal(left), self.to_terminal(right)
+            node.val["left"], node.val["right"] = self.to_terminal(left), self.to_terminal(right)
             return
             # process left child
         if len(left) <= min_size:
-            node["left"] = self.to_terminal(left)
+            node.val["left"] = self.to_terminal(left)
         else:
-            node["left"] = self.get_split(left, n_features)
-            self.split(node["left"], max_depth, min_size, n_features, depth + 1)
+            node.val["left"] = self.get_split(left, n_features)
+            self.split(node.val["left"], max_depth, min_size, n_features, depth + 1)
             # process right child
         if len(right) <= min_size:
-            node["right"] = self.to_terminal(right)
+            node.val["right"] = self.to_terminal(right)
         else:
-            node["right"] = self.get_split(right, n_features)
-            self.split(node["right"], max_depth, min_size, n_features, depth + 1)
+            node.val["right"] = self.get_split(right, n_features)
+            self.split(node.val["right"], max_depth, min_size, n_features, depth + 1)
 
 
     # Build a decision tree
@@ -195,6 +198,9 @@ class Forest:
             sample = dut.subsample(self.train_data, sample_size)
             t = Tree()
             tree = t.build_tree(sample, max_depth, min_size, n_features)
+            print("*"*20)
+            print(tree.val)
+            print("*"*20)
             trees.append(tree)
         predictions = [self.bagging_predict(trees, row) for row in self.test_data]
         print("--- %s seconds ---" % (time.time() - start_time))
@@ -222,7 +228,7 @@ def main():
     x = dataset.values
     print(type(x))
     optim = Forest(train_data, test_data)
-    for n_trees in [30, 50]:
+    for n_trees in [3, 5]:
         scores = optim.evaluate_algorithm(
             False, # seq
             max_depth,
