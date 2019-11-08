@@ -44,7 +44,6 @@ class Tree:
             if size == 0:
                 continue
             score = 0.0
-            # TODO add the gini index helper from C here
             # score the group based on the score for each class
             for class_val in classes:
                 p = [row[-1] for row in group].count(class_val) / size
