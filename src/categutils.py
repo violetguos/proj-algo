@@ -68,34 +68,41 @@ class CategoricalUtil:
         return -1 * sum([p * math.log2(p) for p in pk])  # Return entropy
 
     @staticmethod
-    def cat_split(categories):
-        # Next we need to find all possible binary splits
-        #### does not work with return, only works with yield, why?
-        # Bacically the idea here is to generate the subsets (possible splits) in a smart way.
-        # This is a recursive algo. Basically, you start with the first category. Call this left.
-        # Next you take the second category and set it aside. Call this right.
-        # The way to create a subset of size n when you have all the subsets of size (n-1) is to add the
-        # new element to the left, then to the right, and then create a new subset with it on the left.
-        # ex for n=3:
-        # 1
-        # 1 2
-        # 13  2
-        # 1   23
-        # 3   12
-        # for n=4:
-        # same as n=3 plus:
-        # 134  2
-        # 13   24
-        # 14   23
-        # 1    234
-        # 34   12
-        # 3    124
-        # 4    123
-        if len(categories) == 1:
-            yield [categories]
-        else:
-            first = categories[0]
-            for next_one in CategoricalUtil.cat_split(categories[1:]):  # need to exclude first category, as stored in 'first'
-                for i, subset in enumerate(next_one):
-                    yield next_one[:i] + [[first] + subset] + next_one[i + 1:]
-                yield [[first]] + next_one
+    def cat_split(df, target):
+        # TODO: use the updated split method instead of a plain recursion
+
+        unique = target.unique()
+        # print(unique.size)
+        if unique.size == 1:
+            return unique  # This is not really what we want, need to change this
+            # We will have to change it to, if unique.size=1, then don<t split on this variable.
+        else:  # if size >=2:
+            l = [[unique[0]], [unique[1]]]
+            if unique.size == 2:
+                return l  # only one possible split
+            else:
+                # n=3:
+                left = unique[0]
+                right = unique[1]
+                l = [left, right]
+                result = []
+                result.append([[unique[2]]] + [l])  # 3, [1,2] - so putting 3 rd value alone
+
+                result.append([[unique[2]] + [l[0]]] + [[l[1]]])  # putting 3rd value on left side
+
+                result.append([[l[0]]] + [[unique[2]] + [l[1]]])  # putting 3rd value on right side
+                if unique.size == 3:
+                    return result
+
+                for i in range(3, unique.size):  # for n = 4 to n max, equivalent to for i=3 to n-1
+                    l = result
+                    result = []  # to only return the splits with all the categories
+
+                    # adding new number alone to the left and putting the rest to the right
+                    result.append([[unique[i]]] + [l[0][0] + l[0][1]])
+
+                    for j in range(0, 2 ** (i - 1) - 1):
+                        result.append([[unique[i]] + l[j][0]] + [l[j][1]])  # adding number to left
+                        result.append([l[j][0]] + [[unique[i]] + l[j][1]])  # adding number to the right
+
+                return result
