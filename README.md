@@ -1,14 +1,31 @@
 #  TODOs
 functions to port in NB
 
-- [ ] `split_train_test`
+- [ ] `accuracy`, RMSE for continuous
+- [x] `split_train_test`
 - [ ] `variance_SSR`
 - [ ] `variance_SSR_max`
-- [ ] `gini`
-- [ ] `entropy`
+- [x] `gini`
+- [ ] `entropy` (not used)
 - [ ] `cat_split`
 
 # Preliminary results
+In continous splitting, the naive implementation vs our implementation
+
+500: 
+— 12.80033802986145 seconds ---
+--- 5.197544097900391 seconds ---
+
+200:
+--- 4.361335039138794 seconds ---
+--- 1.6376280784606934 seconds ---
+
+100:
+0.8631629943847656
+0.6476578712463379
+
+
+
 The amount of time taken to construct a tree grows wrt number of trees in a forest since the implementation uses a for loop
 ```
 (base) Violets-MacBook-Pro:math60607 vikuo$ python tree.py

@@ -1,5 +1,6 @@
-# Random Forest Algorithm on Sonar Dataset
-# this will be cleaned down to only forest definition
+# Random Forest Algorithm on iris data
+# referenced https://machinelearningmastery.com/implement-decision-tree-algorithm-scratch-python/
+
 from random import seed
 from random import randrange
 from math import sqrt
@@ -10,10 +11,10 @@ from src import commons as dut
 import pandas as pd
 
 class Node:
-    def __init__(self, val):
-        self.index = val["index"]
-        self.groups = val["groups"]
-        self.value = val["value"]
+    def __init__(self, index, groups, value):
+        self.index = index
+        self.groups = groups
+        self.value = value
 
 class Tree:
     def __init__(self):
@@ -54,7 +55,6 @@ class Tree:
 
     # Select the best split point for a dataset
     def get_split(self, dataset, n_features):
-        #TODO: use C's imp
         class_values = list(set(row[-1] for row in dataset))
         # depends whether subset data, this could be subset of 0,1,2
         b_index, b_value, b_score, b_groups = 999, 999, 999, None
@@ -65,7 +65,7 @@ class Tree:
                 features.append(index)
         for index in features:
             for row in dataset:
-                # row[index] is the threshold value?
+                # row[index] is the threshold value
                 groups = self.test_split(index, row[index], dataset)
                 # print(groups)
                 # self.gini_index(groups, class_values)
@@ -77,7 +77,7 @@ class Tree:
                         gini,
                         groups,
                     )
-        return Node({"index": b_index, "value": b_value, "groups": b_groups})
+        return Node(b_index, b_value, b_groups)
 
 
     # Make a prediction with a decision tree

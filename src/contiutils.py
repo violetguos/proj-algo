@@ -28,7 +28,7 @@ class ContinousUtil:
         return variance_SSR
 
     @staticmethod
-    def variance_SSR_max(df, feature, target):
+    def variance_SSR_max_feat(df, feature, target):
         """
         Alternate function, find max of SSR for all possible splits for a specific variable
         :param df:
@@ -60,19 +60,24 @@ class ContinousUtil:
         :return:
         """
         max_SSR = 0
+
+
+
         for column in df:
-            if column == 'quality': # We can't splt on the target variable
+            if column == 'quality':  # We can't splt on the target variable
                 continue
-            splits = df[column].unique() # Possible splits are all the unique values, except the last value (because of <=)
+            splits = df[column].unique()  # Possible splits are all the unique values, except the last value (because of <=)
             mean = df[column].mean()
-            for split in splits[:-1]: # We have to exclude the last value as split
-                mean_target_group1 = df[df[column]<=split][target].mean()
-                mean_target_group2 = df[df[column]>split][target].mean()
-                len_group1 = sum(df[column]<=split)
+            for split in splits[:-1]:  # We have to exclude the last value as split
+                mean_target_group1 = df[df[column] <= split][target].mean()
+                mean_target_group2 = df[df[column] > split][target].mean()
+                len_group1 = sum(df[column] <= split)
                 len_group2 = len(df.index) - len_group1
-                variance_SSR = len_group1 * (mean_target_group1 - mean)**2 + len_group2 * (mean_target_group2 - mean)**2
+                variance_SSR = len_group1 * (mean_target_group1 - mean) ** 2 + len_group2 * (
+                            mean_target_group2 - mean) ** 2
+                # print("variance_SSR", variance_SSR)
                 if variance_SSR > max_SSR:
                     best_split = split
                     max_SSR = variance_SSR
                     best_column = column
-        return best_split, best_column
+        return best_split, best_column, max_SSR
