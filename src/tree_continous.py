@@ -64,7 +64,7 @@ class Node:
                 rhs = x > split
                 if rhs.sum() < self.min_leaf_count or lhs.sum() < self.min_leaf_count: continue
 
-                curr_score = self.find_score(lhs, rhs)
+                curr_score = self.variance_ssr(lhs, rhs)
                 if curr_score < self.score:
                     self.var_idx = var_idx
                     self.score = curr_score
@@ -80,6 +80,18 @@ class Node:
         lhs_std = y_select[lhs].std()
         rhs_std = y_select[rhs].std()
         return lhs_std * lhs.sum() + rhs_std * rhs.sum()
+
+    def variance_ssr(self, lhs, rhs):
+        y_select = self.y[self.idxs]
+        mean_target_group1 = y_select[lhs].mean()
+        len_group1 = len(lhs)
+        mean_target_group2 = y_select[rhs].mean()
+        len_group2 = len(rhs)
+        mean_y = y_select.mean()
+        variance_SSR = len_group1 * (mean_target_group1 - mean_y)**2 + len_group2 * (mean_target_group2 - mean_y)**2
+        return variance_SSR
+
+
 
 
     @property
