@@ -69,9 +69,22 @@ class CategoricalUtil:
 
     @staticmethod
     def cat_split(df, target):
+        unique = df[target].unique()
+        for val in unique:
+            left, right = list(), list()
+            for row in df:
+                if row[index] < value:
+                    left.append(row)
+                else:
+                    right.append(row)
+            return left, right
+
+
+    @staticmethod
+    def cat_split_old(df, target):
         # TODO: use the updated split method instead of a plain recursion
 
-        unique = target.unique()
+        unique = df[target].unique()
         # print(unique.size)
         if unique.size == 1:
             return unique  # This is not really what we want, need to change this

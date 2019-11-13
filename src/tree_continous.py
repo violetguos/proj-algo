@@ -7,7 +7,7 @@ import time
 
 
 class DecisionTreeRegressor:
-
+    # TODO: borrowed
     def fit(self, X, y, min_leaf=5):
         self.dtree = Node(X, y, np.array(np.arange(len(y))), min_leaf)
         return self
@@ -30,6 +30,8 @@ class Node:
         self.find_varsplit()
 
     def find_varsplit(self):
+        # TODO: borrowed
+        # TODO: consider the missing values, if any
         for c in range(self.col_count): self.find_better_split(c)
         if self.is_leaf: return
 
@@ -40,6 +42,7 @@ class Node:
         self.rhs = Node(self.x, self.y, self.idxs[rhs])
 
     def find_better_split(self, var_idx, all=False):
+        # TODO: borrowed
         if all is True:
             x = self.x.values[self.idxs, var_idx]
 
@@ -71,9 +74,8 @@ class Node:
                     self.split = split
 
 
-
-
     def find_score(self, lhs, rhs):
+        # TODO: get rid this, already have var_ssr
         y_select = self.y[self.idxs]
         # print("y sel", y_select)
         # print("lhs", lhs)
@@ -91,9 +93,6 @@ class Node:
         variance_SSR = len_group1 * (mean_target_group1 - mean_y)**2 + len_group2 * (mean_target_group2 - mean_y)**2
         return variance_SSR
 
-
-
-
     @property
     def is_leaf(self):
         return self.score == float('inf')
@@ -107,7 +106,8 @@ class Node:
         :param xi: each column in the df
         :return:
         """
-        if self.is_leaf: return self.val
+        if self.is_leaf:
+            return self.val
 
         # else, recurse left and right from current node
         if xi[self.var_idx] <= self.split:

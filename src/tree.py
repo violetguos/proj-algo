@@ -8,7 +8,7 @@ import time
 from src import commons as dut
 
 
-class DecisionTreeRegressor:
+class DecisionTreeCatgorical:
 
     def fit(self, X, y, min_leaf=5):
         self.dtree = Node(X, y, np.array(np.arange(len(y))), min_leaf)
@@ -32,8 +32,11 @@ class Node:
         self.find_varsplit()
 
     def find_varsplit(self):
-        for c in range(self.col_count): self.find_better_split(c)
-        if self.is_leaf: return
+        # TODO: adapt this function
+        for c in range(self.col_count):
+            self.find_better_split(c)
+        if self.is_leaf:
+            return
 
         selected_x = self.x.values[self.idxs, self.var_idx]
         lhs = np.nonzero(selected_x <= self.split)[0]
@@ -41,28 +44,75 @@ class Node:
         self.lhs = Node(self.x, self.y, self.idxs[lhs])
         self.rhs = Node(self.x, self.y, self.idxs[rhs])
 
+    def cat_split(self, var_idx):
+        col = self.x.iloc[self.idxs, var_idx]
+        unique = col.unique()
+        res = list()
+        for threshold in unique:
+            left, right = list(), list()
+            print("type col", type(col))
+            for index, col_val in col.items():
+                if col_val < threshold:
+                    # only append index of that row, not making a copy
+                    left.append(index)
+                else:
+                    right.append(index)
+            res.append((left, right, threshold))
+        return res
+
     def find_better_split(self, var_idx):
+        x_col = self.x.iloc[self.idxs, var_idx]
+        # TODO: don't use flower name as the target var??
+        splits = self.cat_split(var_idx)
 
-        x = self.x.iloc[self.idxs, var_idx]
-        splits = cat_util.CategoricalUtil.cat_split(self.x, self.y)
-        print(splits)
 
+        test_s_1 = splits[0][0]
+        test_s_2 = splits[0][1]
+        test_s = test_s_1 + test_s_2
+
+        test_1 = self.idxs.tolist()
+        test_s = test_s.sort()
+        test_1 = test_1.sort()
+        assert test_s == test_1
+
+        best_lhs, best_rhs = None, None
         for split in splits:
-            lhs = x <= split
-            rhs = x > split
+
+            # split is a list of 2 lists, now we assign them to the lhs and rhs
+
+            lhs = pd.Series(split[0])
+            rhs = pd.Series(split[1])
             if rhs.sum() < self.min_leaf_count or lhs.sum() < self.min_leaf_count: continue
 
-            curr_score = self.find_score(lhs, rhs)
+            curr_score = self.find_score(split)
             if curr_score < self.score:
                 self.var_idx = var_idx
                 self.score = curr_score
                 self.split = split
+                best_lhs, best_rhs = lhs, rhs
+        # TODO: this only returns the best lhs, rhs of each col feature, not the global one
+        return best_lhs, best_rhs
 
 
 
 
-    def find_score(self, lhs, rhs):
-        return cat_util.CategoricalUtil.gini((lhs, rhs), range(2))
+    def find_score(self, split):
+        pk = []
+        score = 0
+        categories = range(2)
+        for category in categories:
+            sum_cat = 0.0
+            subtree = pd.Series(split[0])
+            total_rows = subtree.shape[0]
+            if len(split[0]) > 0:
+                for idx in subtree:
+                    print("idx", idx)
+                    break
+                    if self.y.iloc[idx] == category:
+                        sum_cat += 1
+                pk.append(sum_cat / len(subtree))  # Find proportion in each class
+            score += (1 - sum([p ** 2 for p in pk])) * (len(subtree) / total_rows)
+        return score
 
 
     @property
@@ -91,16 +141,17 @@ class Node:
 filename = "../data/iris_data.csv"
 df = cat_util.read_pd(filename)
 train_df, test_df = cat_util.split_train_test(df)
+print("df shape", df.shape)
 # NOTE!!: this must be done, otherwise some strange indexing error in pandas
-test_df = df[0:50]
-X = test_df[["sepal_length","sepal_width", "petal_length", "petal_width"]]
-y = test_df["species"]
+test_df = df[0:100]
+X = train_df[["sepal_length","sepal_width", "petal_length", "petal_width"]]
+y = train_df["species"]
 
 start_time = time.time()
 
-regressor = DecisionTreeRegressor().fit(X, y)
-X = train_df[0:10][["sepal_length","sepal_width", "petal_length", "petal_width"]]
-actual = train_df[0:10]["species"]
+regressor = DecisionTreeCatgorical().fit(X, y)
+X = test_df[0:50][["sepal_length","sepal_width", "petal_length", "petal_width"]]
+actual = test_df[0:50]["species"]
 preds = regressor.predict(X)
 print("--- %s seconds ---" % (time.time() - start_time))
 
