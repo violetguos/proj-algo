@@ -65,6 +65,7 @@ class Tree:
                 features.append(index)
         for index in features:
             for row in dataset:
+                # they test every row, we only test the unique values
                 # row[index] is the threshold value
                 groups = self.test_split(index, row[index], dataset)
                 # print(groups)
