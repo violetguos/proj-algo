@@ -27,14 +27,14 @@ class Node:
 
     def __init__(self, x, y, idxs, min_leaf_count=5):
         assert(x.shape[1]==4)
-        print("x.shape[1]", x.shape[1])
+        # print("x.shape[1]", x.shape[1])
         self.x = x
         self.y = y
         self.idxs = idxs
         self.min_leaf_count = min_leaf_count
         self.row_count = len(idxs)
-        self.col_count = x.shape[1] - 1
-        self.val = np.mean(y[idxs])
+        self.col_count = x.shape[1]
+        self.val = y[idxs].mode()[0]
         self.score = float('inf')
         self.find_varsplit()
 
@@ -75,8 +75,8 @@ class Node:
 
 
             print(e)
-            print("self.idxs", self.idxs)
-            print("var_idx", var_idx)
+            # print("self.idxs", self.idxs)
+            # print("var_idx", var_idx)
 
     def find_better_split(self, var_idx):
 
@@ -160,7 +160,6 @@ class Node:
 filename = "../data/iris_data.csv"
 df = cat_util.read_pd(filename)
 # train_df, test_df = cat_util.split_train_test(df)
-print("df shape", df.shape)
 # NOTE!!: this must be done, otherwise some strange indexing error in pandas
 X = df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
 y = df["species"]
