@@ -8,6 +8,10 @@ import time
 from src import commons as dut
 
 
+# TODO: self.split has a tuple of 3 variables, (left, right, threshold)
+# Should make it into another class?? or not jsut to make things sper clear
+# instead of indexing [0][1[2]
+
 class DecisionTreeCatgorical:
 
     def fit(self, X, y, min_leaf=5):
@@ -139,35 +143,38 @@ class Node:
     def predict_col_helper(self, xi):
         """
         Recurse helper
-        :param xi: each column in the df
+        :param xi: each row in the df
         :return:
         """
 
-        if self.is_leaf: return self.val
+        if self.is_leaf:
+            return self.val
         # else, recurse left and right from current node
-        if xi[self.var_idx] <= self.split:
+        if xi[self.var_idx] <= self.split[2]:
             node = self.lhs
         else:
             node = self.rhs
         return node.predict_col_helper(xi)
 
 
-filename = "../data/iris_test.csv"
+filename = "../data/iris_data.csv"
 df = cat_util.read_pd(filename)
-train_df, test_df = cat_util.split_train_test(df)
+# train_df, test_df = cat_util.split_train_test(df)
 print("df shape", df.shape)
 # NOTE!!: this must be done, otherwise some strange indexing error in pandas
-X = train_df[["sepal_length","sepal_width", "petal_length", "petal_width"]]
-y = train_df["species"]
+X = df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
+y = df["species"]
 
+print(X)
 print(X.shape)
 print(X.iloc[5])
 start_time = time.time()
 
-# regressor = DecisionTreeCatgorical().fit(X, y)
-X = test_df[["sepal_length","sepal_width", "petal_length", "petal_width"]]
-actual = test_df["species"]
+regressor = DecisionTreeCatgorical().fit(X, y)
+X = df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
+actual = df["species"]
 preds = regressor.predict(X)
+print("preds", preds)
 print("--- %s seconds ---" % (time.time() - start_time))
 
 accuracy = dut.accuracy_metric(actual.values, preds)
