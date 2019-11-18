@@ -1,261 +1,248 @@
-# Random Forest Algorithm on iris data
-# referenced https://machinelearningmastery.com/implement-decision-tree-algorithm-scratch-python/
+# a single tree implemented using categorical variables, iris dataset
 
-from random import seed
-from random import randrange
-from math import sqrt
-import time
-from multiprocessing.pool import Pool
-from src import categutils as cat_util
-from src import commons as dut
+# reference:  https://levelup.gitconnected.com/building-a-decision-tree-from-scratch-in-python-machine-learning-from-scratch-part-ii-6e2e56265b19
+import numpy as np
 import pandas as pd
+from src import categutils as cat_util
+import time
+from src import commons as dut
+
+import math
+
+
+class DecisionTreeCatgorical:
+
+    def fit(self, X, y, min_leaf=10):
+        self.dtree = Node(X, y, np.array(np.arange(len(y))), min_leaf)
+        return self
+
+    def predict(self, X):
+        return self.dtree.predict(X.values)
+
+
+class Split:
+    def __init__(self, lhs, rhs, threshold):
+        """
+        # self.split has a tuple of 3 variables, (left, right, threshold)
+        Should make it into another class?, jsut to make things SUPER clear
+        instead of indexing [0][1[2]
+        :param lhs:
+        :param rhs:
+        :param threshold:
+        """
+        self.lhs = lhs
+        self.rhs = rhs
+        self.threshold = threshold
+
+    def print(self):
+        """
+        This prints helpful information in intermediate steps
+        :return:
+        """
+        print("lhs {} rhs {} threshold".format(self.lhs, self.rhs, self.threshold))
+
 
 class Node:
-    def __init__(self, index, groups, value):
-        self.index = index
-        self.groups = groups
-        self.value = value
 
-class Tree:
-    def __init__(self):
-        self.feature = 1
-    
-    # Split a dataset based on an attribute and an attribute value
-    def test_split(self, index, value, dataset):
-        left, right = list(), list()
-        for row in dataset:
-            if row[index] < value:
-                left.append(row)
-            else:
-                right.append(row)
-        return left, right
+    def __init__(self, x, y, idxs, min_leaf_count=5):
 
-    # Calculate the Gini index for a split dataset
-    def gini_index(self, groups, classes):
-        # NOTE: this is before cleaning
-        # new updated function is in categutils.py
+        """
 
-        # count all samples at split point
-        n_instances = float(sum([len(group) for group in groups]))
-        # sum weighted Gini index for each group
-        gini = 0.0
-        for group in groups:
-            size = float(len(group))
-            # avoid divide by zero
-            if size == 0:
+        :param x: data column
+        :param y: the target variable
+        :param idxs: the subset at this node's split
+        :param min_leaf_count: prevents overfitting
+        :param val: a majority vote based on all the Ys in this node
+        """
+        self.x = x
+        self.y = y
+        self.idxs = idxs
+
+        self.min_leaf_count = min_leaf_count
+        self.row_count = len(idxs)
+        self.col_count = x.shape[1]
+        self.val = y[idxs].mode()[0]
+        self.score = float('inf')
+
+        # this method is automatically called when we declare a node.
+        # only a short hand notation
+        self.find_varsplit()
+
+    def find_varsplit(self):
+        """
+        Iterate all the columns
+        Find the best one to split one at a time
+        :return:
+        """
+        for c in range(self.col_count):
+            self.find_better_split(c)
+        if self.is_leaf:
+            return
+
+        # after we found the newest LHS, and RHS, declare the new nodes
+        # and store them inside self parameters
+        # so we can run a prediction outside the scope by following these pointers
+        self.lhs = Node(self.x, self.y, self.best_lhs_indices)
+        self.rhs = Node(self.x, self.y, self.best_rhs_indices)
+
+    def find_better_split(self, var_idx):
+        # this generates all the splits
+        # TODO: optimize this funciton
+        splits = self.cat_split(var_idx)
+
+        for split in splits:
+            # split has 2 lists, now we assign them to the lhs and rhs
+            # we store the indices of rows in a given `column[var_idx]`
+            lhs = pd.Series(split.lhs)
+            rhs = pd.Series(split.rhs)
+
+            # TODO: change this to proper counts
+            if rhs.size < self.min_leaf_count or lhs.size < self.min_leaf_count:
                 continue
-            score = 0.0
-            # score the group based on the score for each class
-            for class_val in classes:
-                p = [row[-1] for row in group].count(class_val) / size
-                score += p * p
-                # weight the group score by its relative size
-            gini += (1.0 - score) * (size / n_instances)
-        return gini
 
-    # Select the best split point for a dataset
-    def get_split(self, dataset, n_features):
-        class_values = list(set(row[-1] for row in dataset))
-        # depends whether subset data, this could be subset of 0,1,2
-        b_index, b_value, b_score, b_groups = 999, 999, 999, None
-        features = list()
-        while len(features) < n_features:
-            index = randrange(len(dataset[0]) - 1)
-            if index not in features:
-                features.append(index)
-        for index in features:
-            for row in dataset:
-                # they test every row, we only test the unique values
-                # row[index] is the threshold value
-                groups = self.test_split(index, row[index], dataset)
-                # print(groups)
-                # self.gini_index(groups, class_values)
-                gini = cat_util.CategoricalUtil.gini(groups, class_values)
-                if gini < b_score:
-                    b_index, b_value, b_score, b_groups = (
-                        index,
-                        row[index],
-                        gini,
-                        groups,
-                    )
-        return Node(b_index, b_value, b_groups)
+            curr_score = self.find_score(split)
+            if curr_score < self.score:
+                self.var_idx = var_idx
+                # NOTE: this is the line that makes it the global score
+                self.score = curr_score
+                self.split = split
+                self.best_lhs_indices, self.best_rhs_indices = lhs, rhs
+
+    def cat_split(self, var_idx):
+
+        """
+        :param var_idx: the current column from def find_better_split(self):
+
+        :return: all possible splits at this
+        """
+        # this handles some indexing exceptions
+        # no longer happens as of commit PR #2
+
+        col = self.x.iloc[self.idxs, var_idx]
+
+        unique = col.unique()
+        res = list()
+        for threshold in unique:
+            left, right = list(), list()
+            # print("type col", type(col))
+            for index, col_val in col.items():
+                if col_val < threshold:
+                    # only append index of that row, not making a copy
+                    left.append(index)
+                else:
+                    right.append(index)
+        res.append(Split(left, right, threshold))
+        return res
+
+    def find_score(self, split, func='entropy'):
+        if func == 'gini':
+            return self.gini(split)
+        elif func == 'entropy':
+            return self.entropy(split)
+
+    def entropy(self, split):
+
+        score = 0
+        # only 0, 1, 2 in iris dataset
+        categories = range(3)
+        subtrees = split.lhs, split.rhs
 
 
-    # Make a prediction with a decision tree
-    def predict(self, node, row):
-        if row[node.index] < node.value:
-            if isinstance(node.left, Node):
-                return self.predict(node.left, row)
-            else:
-                return node.left
+        i = 0
+        two_subtrees_entropy = 0
+        for category in categories:
+            pk = []
+
+            for s in subtrees:
+                # left or right
+                subtree = pd.Series(s)
+                # print("self.y[subtree]", self.y[subtree])
+                pk.append(sum(self.y[subtree] == category) / len(subtree))  # Find proportion in each class
+
+                # calculate a single entropy, handle the 0 case
+                entropy = 0
+
+                for p in pk:
+                    if p != 0:
+                        entropy += p * math.log2(p)
+                entropy  = -1 * entropy
+            two_subtrees_entropy += entropy
+
+        return  two_subtrees_entropy # Return entropy
+
+
+    def gini(self, split):
+        # this is the old gini function
+        pk = []
+        score = 0
+        # only 0, 1, 2 in iris dataset
+        categories = range(3)
+        subtrees = split.lhs, split.rhs
+        for category in categories:
+            sum_cat = 0.0
+            for s in subtrees:  # left or right, 0 for left, 1 for right
+                subtree = pd.Series(s)
+                total_rows = subtree.shape[0]
+                if total_rows > 0:
+                    for idx in subtree:
+                        if self.y[idx] == category:
+                            sum_cat += 1
+                    pk.append(sum_cat / len(subtree))  # Find proportion in each class
+                score += (1 - sum([p ** 2 for p in pk])) * (len(subtree) / total_rows)
+        return score
+
+    @property
+    def is_leaf(self):
+        return self.score == float('inf')
+
+    def predict(self, x):
+        # predict row by row
+        res = []
+        for row in x:
+            res.append(self.predict_row_helper(row))
+        return np.array(res)
+
+    def predict_row_helper(self, row):
+        """
+        Recurse helper
+        :param row: each row in the df
+        :return:
+        """
+
+        if self.is_leaf:
+            return self.val
+        # else, recurse left and right from current node
+        if row[self.var_idx] <= self.split.threshold:
+            node = self.lhs
         else:
-            if isinstance(node.right, Node):
-                return self.predict(node.right, row)
-            else:
-                return node.right
-
-
-    # Create a terminal node value
-    def to_terminal(self, group):
-        outcomes = [row[-1] for row in group]
-        return max(set(outcomes), key=outcomes.count)
-
-
-    # Create child splits for a node or make terminal
-    def split(self, node, max_depth, min_size, n_features, depth):
-        left, right = node.groups
-        del (node.groups)
-        # check for a no split
-        if not left or not right:
-            node.left = node.right = self.to_terminal(left + right)
-            return
-            # check for max depth
-        if depth >= max_depth:
-            node.left, node.right = self.to_terminal(left), self.to_terminal(right)
-            return
-            # process left child
-        if len(left) <= min_size:
-            node.left = self.to_terminal(left)
-        else:
-            node.left = self.get_split(left, n_features)
-            self.split(node.left, max_depth, min_size, n_features, depth + 1)
-            # process right child
-        if len(right) <= min_size:
-            node.right = self.to_terminal(right)
-        else:
-            node.right = self.get_split(right, n_features)
-            self.split(node.right, max_depth, min_size, n_features, depth + 1)
-
-
-    # Build a decision tree
-    def build_tree(self, train, max_depth, min_size, n_features):
-        root = self.get_split(train, n_features)
-        self.split(root, max_depth, min_size, n_features, 1)
-        return root
-
-
-class Forest:
-    def __init__(self, train_data, test_data):
-        self.n_folds = 5
-        self.max_depth = 10
-        self.min_size = 1
-        # self.dataset = data
-        self.train_data = train_data
-        self.test_data = test_data
-
-    def predict(self, model):
-        pass
-
-    def evaluate_algorithm(self, parallel, *args):
-        scores = []
-        if parallel is False:
-            print("Test sequential")
-            predicted = self.random_forest_seq(*args)
-        else:
-            print("Test parallel")
-            predicted = self.random_forest(*args)
-        actual = [row[-1] for row in self.test_data]
-        accuracy = dut.accuracy_metric(actual, predicted)
-        scores.append(accuracy)
-        return scores
-
-    # Make a prediction with a list of bagged trees
-    def bagging_predict(self, trees, row):
-        t = Tree()
-        predictions = [t.predict(tree, row) for tree in trees]
-        return max(set(predictions), key=predictions.count)
-
-    # Random Forest Algorithm
-    def random_forest(
-        self, max_depth, min_size, sample_size, n_trees, n_features
-    ):
-        pool = Pool(processes=4)
-
-        trees = list()
-        start_time = time.time()
-        async_result = list()
-        for i in range(n_trees):
-            sample = dut.subsample(self.train_data, sample_size)
-            t = Tree()
-            res = pool.apply_async(
-                t.build_tree, (sample, max_depth, min_size, n_features)
-            )
-            async_result.append(res)
-
-        return_val = [res.get(timeout=1) for res in async_result]
-        trees = return_val
-
-
-        predictions = [self.bagging_predict(trees, row) for row in self.test_data]
-        print("--- %s seconds ---" % (time.time() - start_time))
-        return predictions
-
-    def random_forest_seq(
-        self, max_depth, min_size, sample_size, n_trees, n_features
-    ):
-        # TODO:add the tress list to self param
-        trees = list()
-        start_time = time.time()
-        for i in range(n_trees):
-            sample = dut.subsample(self.train_data, sample_size)
-            t = Tree()
-            tree = t.build_tree(sample, max_depth, min_size, n_features)
-            print("*"*20)
-            print(tree)
-            print("*"*20)
-            trees.append(tree)
-        predictions = [self.bagging_predict(trees, row) for row in self.test_data]
-        print("--- %s seconds ---" % (time.time() - start_time))
-        return predictions
+            node = self.rhs
+        return node.predict_row_helper(row)
 
 
 def main():
-    # Test the random forest algorithm
-    seed(2)
-    # load and prepare data
     filename = "../data/iris_data.csv"
-    dataset = cat_util.read_pd(filename)
+    df = cat_util.read_pd(filename)
+    # NOTE!!: this must be done, otherwise some strange indexing error in pandas
+    train_df, test_df = cat_util.split_train_test(df, train=0.8)
+    train_df = train_df.reset_index(drop=True)
 
-    t1, t2 = cat_util.split_train_test(dataset)
+    test_df = test_df.reset_index(drop=True)
+    X = train_df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
+    y = train_df["species"]
 
-    train_data = t1.values
-    test_data = t2.values
-    #
-    # evaluate algorithm
-    n_folds = 5
-    max_depth = 10
-    min_size = 1
-    sample_size = 1.0
-    n_features = 4 # 4 for iris
-    x = dataset.values
-    print(type(x))
-    optim = Forest(train_data, test_data)
-    for n_trees in [3, 5]:
-        scores = optim.evaluate_algorithm(
-            False, # seq
-            max_depth,
-            min_size,
-            sample_size,
-            n_trees,
-            n_features,
-        )
-        print("Trees: %d" % n_trees)
-        print("Scores: %s" % scores)
-        print("Mean Accuracy: %.3f%%" % (sum(scores) / float(len(scores))))
+    start_time = time.time()
 
-    # for n_trees in [30, 50]:
-    #     scores = optim.evaluate_algorithm(
-    #         True, # parallel
-    #         max_depth,
-    #         min_size,
-    #         sample_size,
-    #         n_trees,
-    #         n_features,
-    #     )
-    #     print("Trees: %d" % n_trees)
-    #     print("Scores: %s" % scores)
-    #     print("Mean Accuracy: %.3f%%" % (sum(scores) / float(len(scores))))
-    #
+    regressor = DecisionTreeCatgorical().fit(X, y)
+    X = test_df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
+    actual = test_df["species"]
+    preds = regressor.predict(X)
+    print("preds", preds)
+    print("--- %s seconds ---" % (time.time() - start_time))
+
+    accuracy = dut.accuracy_metric(actual.values, preds)
+    print(accuracy)
+
 
 if __name__ == '__main__':
     main()
+
