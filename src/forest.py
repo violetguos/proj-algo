@@ -10,6 +10,11 @@ from src import categutils as cat_util
 from src import commons as dut
 import pandas as pd
 
+"""
+This file is intended to ensamble all the trees and make a random forest prediction
+"""
+
+
 class Node:
     def __init__(self, index, groups, value):
         self.index = index
