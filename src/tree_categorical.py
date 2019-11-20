@@ -12,8 +12,8 @@ import math
 
 class DecisionTreeCatgorical:
 
-    def fit(self, X, y, min_leaf=10):
-        self.dtree = Node(X, y, np.array(np.arange(len(y))), min_leaf)
+    def fit(self, X, y, label_set, min_leaf=5):
+        self.dtree = Node(X, y, np.array(np.arange(len(y))),label_set, min_leaf)
         return self
 
     def predict(self, X):
@@ -44,15 +44,15 @@ class Split:
 
 class Node:
 
-    def __init__(self, x, y, idxs, min_leaf_count=5):
+    def __init__(self, x, y, idxs, label_set, min_leaf_count=5):
 
         """
-
         :param x: data column
         :param y: the target variable
         :param idxs: the subset at this node's split
         :param min_leaf_count: prevents overfitting
         :param val: a majority vote based on all the Ys in this node
+        :param label_set: the set of all labels in the dataset, deisgned to adapt to different datasets
         """
         self.x = x
         self.y = y
@@ -63,6 +63,8 @@ class Node:
         self.col_count = x.shape[1]
         self.val = y[idxs].mode()[0]
         self.score = float('inf')
+        self.label_set = label_set
+
 
         # this method is automatically called when we declare a node.
         # only a short hand notation
@@ -82,8 +84,8 @@ class Node:
         # after we found the newest LHS, and RHS, declare the new nodes
         # and store them inside self parameters
         # so we can run a prediction outside the scope by following these pointers
-        self.lhs = Node(self.x, self.y, self.best_lhs_indices)
-        self.rhs = Node(self.x, self.y, self.best_rhs_indices)
+        self.lhs = Node(self.x, self.y, self.best_lhs_indices, self.label_set)
+        self.rhs = Node(self.x, self.y, self.best_rhs_indices, self.label_set)
 
     def find_better_split(self, var_idx):
         # this generates all the splits
@@ -96,7 +98,6 @@ class Node:
             lhs = pd.Series(split.lhs)
             rhs = pd.Series(split.rhs)
 
-            # TODO: change this to proper counts
             if rhs.size < self.min_leaf_count or lhs.size < self.min_leaf_count:
                 continue
 
@@ -121,6 +122,7 @@ class Node:
         col = self.x.iloc[self.idxs, var_idx]
 
         unique = col.unique()
+
         res = list()
         for threshold in unique:
             left, right = list(), list()
@@ -144,7 +146,7 @@ class Node:
 
         score = 0
         # only 0, 1, 2 in iris dataset
-        categories = range(3)
+        categories = self.label_set
         subtrees = split.lhs, split.rhs
 
 
@@ -176,7 +178,7 @@ class Node:
         pk = []
         score = 0
         # only 0, 1, 2 in iris dataset
-        categories = range(3)
+        categories = self.label_set
         subtrees = split.lhs, split.rhs
         for category in categories:
             sum_cat = 0.0
@@ -232,7 +234,7 @@ def main():
 
     start_time = time.time()
 
-    regressor = DecisionTreeCatgorical().fit(X, y)
+    regressor = DecisionTreeCatgorical().fit(X, y, range(3))
     X = test_df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
     actual = test_df["species"]
     preds = regressor.predict(X)
