@@ -95,8 +95,9 @@ class Node:
         :return:
         """
         lhs_unique = self.y[split.lhs].unique()
-        print(lhs_unique)
-        print(len(lhs_unique))
+
+        #print(lhs_unique)
+        # print(len(lhs_unique))
         rhs_unique = self.y[split.rhs].unique()
         if len(lhs_unique) == 1 or len(rhs_unique) == 1:
             return True
