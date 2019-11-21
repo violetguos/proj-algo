@@ -87,33 +87,69 @@ class Node:
         self.lhs = Node(self.x, self.y, self.best_lhs_indices, self.label_set)
         self.rhs = Node(self.x, self.y, self.best_rhs_indices, self.label_set)
 
+
+    def find_pure_in_splits(self, split):
+        """
+        A helper function for the find_better_split()
+        If a subtree contains pure y labels,  we don't check the rest
+        :return:
+        """
+        lhs_unique = self.y[split.lhs].unique()
+        print(lhs_unique)
+        print(len(lhs_unique))
+        rhs_unique = self.y[split.rhs].unique()
+        if len(lhs_unique) == 1 or len(rhs_unique) == 1:
+            return True
+        else:
+            return False
+
+
+
     def find_better_split(self, var_idx):
         # this generates all the splits
         # TODO: optimize this funciton
         splits = self.cat_split(var_idx)
 
-        for split in splits:
-            # split has 2 lists, now we assign them to the lhs and rhs
-            # we store the indices of rows in a given `column[var_idx]`
-            lhs = pd.Series(split.lhs)
-            rhs = pd.Series(split.rhs)
 
-            if rhs.size < self.min_leaf_count or lhs.size < self.min_leaf_count:
-                continue
+        # while not res
+        # iter in list of splits
+        res = False # inital val
+        i = 0
 
-            curr_score = self.find_score(split)
-            if curr_score < self.score:
-                self.var_idx = var_idx
-                # NOTE: this is the line that makes it the global score
-                self.score = curr_score
-                self.split = split
-                self.best_lhs_indices, self.best_rhs_indices = lhs, rhs
+        while not res and i < len(splits):
+            res = self.find_pure_in_splits(splits[i])
+            i += 1
+
+        if res == True and i != len(splits)-1 and len(splits[i-1].lhs) >= self.min_leaf_count and len(splits[i-1].rhs) >= self.min_leaf_count:
+            i -= 1
+            self.var_idx = var_idx
+            curr_score = self.find_score(splits[i])
+            # NOTE: this is the line that makes it the global score
+            self.score = curr_score
+            self.split = splits[i]
+            self.best_lhs_indices, self.best_rhs_indices = splits[i].lhs, splits[i].rhs
+
+        else:
+            for split in splits:
+                # split has 2 lists, now we assign them to the lhs and rhs
+                # we store the indices of rows in a given `column[var_idx]`
+                lhs = pd.Series(split.lhs)
+                rhs = pd.Series(split.rhs)
+
+                if rhs.size < self.min_leaf_count or lhs.size < self.min_leaf_count:
+                    continue
+
+                curr_score = self.find_score(split)
+                if curr_score < self.score:
+                    self.var_idx = var_idx
+                    # NOTE: this is the line that makes it the global score
+                    self.score = curr_score
+                    self.split = split
+                    self.best_lhs_indices, self.best_rhs_indices = lhs, rhs
 
     def cat_split(self, var_idx):
-
         """
-        :param var_idx: the current column from def find_better_split(self):
-
+        :param var_idx: the current column from def find_better_split(self)
         :return: all possible splits at this
         """
         # this handles some indexing exceptions
@@ -149,7 +185,6 @@ class Node:
         categories = self.label_set
         subtrees = split.lhs, split.rhs
 
-
         i = 0
         two_subtrees_entropy = 0
         for category in categories:
@@ -160,14 +195,12 @@ class Node:
                 subtree = pd.Series(s)
                 # print("self.y[subtree]", self.y[subtree])
                 pk.append(sum(self.y[subtree] == category) / len(subtree))  # Find proportion in each class
-
                 # calculate a single entropy, handle the 0 case
                 entropy = 0
-
                 for p in pk:
                     if p != 0:
                         entropy += p * math.log2(p)
-                entropy  = -1 * entropy
+                entropy = -1 * entropy
             two_subtrees_entropy += entropy
 
         return  two_subtrees_entropy # Return entropy
