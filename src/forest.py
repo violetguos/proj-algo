@@ -10,6 +10,27 @@ from src.tree.tree_categorical import DecisionTreeCatgorical
 
 class Forest():
     def __init__(self, tree_num):
+        """
+        :param tree_num: this defined how many trees we train in a RF algo
+        :param tree_arr: this stores a list root nodes to trees in the forsest
+        :param res_arr: an array of `tree_num` arrays, where each array stores the prediction of
+        one tree. Then we apply majority function to make a final decisoion
+
+        Illustation:
+        This is res_arr, it's dim n by m, where n = tree_num, m depends on the test data dimension
+        test data
+           x1, .... xm
+        [ [ res of tree 1]
+          [ y1 .... ym   ]
+          [ res of tree 2]
+          ....
+          [ res of tree n]
+        ]
+          At this vertical axis, we make a decision for each X.
+
+        self.res is a list of dimension 1 by m.
+
+        """
         self.tree_num = tree_num
         self.tree_arr = []
         self.res_arr = []
@@ -17,9 +38,9 @@ class Forest():
 
     def fit(self, X, y):
         """
-        For each tree, calls fit
+        For each tree, calls Node.fit
         :param X: we need to work on subsample here
-        :param y:
+        :param y: label
         :return:
         """
         for i in range(self.tree_num):
@@ -30,7 +51,7 @@ class Forest():
         """
         Tests the performance of the trees.
         :param X: test set
-        :return:
+        :return: the result array
         """
         for tree in self.tree_arr:
             res = tree.predict(X)
@@ -42,6 +63,8 @@ class Forest():
         # TODO: potential discuss how to speed this up
         # can try  prof's array indexing tricks??
         for i in range(len(X.index)):
+            # this `[:,i]` array indexing enables us to look at each column
+            # this is the majority count of a 2D matrix in np array format
             counts = np.bincount(self.res_arr[:,i])
             self.res.append(np.argmax(counts))
 
@@ -52,6 +75,8 @@ class Forest():
 
 
 def main():
+
+    # 3 is very arbitary here. Only for testing.
     forest = Forest(3)
 
     filename = "../data/iris_data.csv"
