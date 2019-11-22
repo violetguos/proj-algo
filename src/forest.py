@@ -8,8 +8,9 @@ from src import commons as dut
 
 from src.tree.tree_categorical import DecisionTreeCatgorical
 
+
 class Forest():
-    def __init__(self, tree_num):
+    def __init__(self, tree_num, sampler):
         """
         :param tree_num: this defined how many trees we train in a RF algo
         :param tree_arr: this stores a list root nodes to trees in the forsest
@@ -32,18 +33,23 @@ class Forest():
 
         """
         self.tree_num = tree_num
+        self.sampler = sampler
         self.tree_arr = []
         self.res_arr = []
         self.res = []
 
-    def fit(self, X, y):
+    def fit(self, df):
         """
         For each tree, calls Node.fit
         :param X: we need to work on subsample here
         :param y: label
         :return:
         """
+
         for i in range(self.tree_num):
+            df_subset = self.sampler(df, sample=0.7)
+            X = df_subset[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
+            y = df_subset["species"]
             tree = DecisionTreeCatgorical().fit(X, y, range(3))
             self.tree_arr.append(tree)
 
@@ -70,14 +76,12 @@ class Forest():
 
         return self.res
 
-
-
-
-
 def main():
 
     # 3 is very arbitary here. Only for testing.
-    forest = Forest(3)
+
+    print("Experiment using row sampling")
+    forest = Forest(5, cat_util.bootstrap_sample)
 
     filename = "../data/iris_data.csv"
     df = cat_util.read_pd(filename)
@@ -86,12 +90,13 @@ def main():
     train_df = train_df.reset_index(drop=True)
 
     test_df = test_df.reset_index(drop=True)
-    X = train_df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
-    y = train_df["species"]
+    # X = train_df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
+    # y = train_df["species"]
 
     start_time = time.time()
 
-    forest.fit(X, y)
+    forest.fit(train_df)
+
     X = test_df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
     actual = test_df["species"]
     preds = forest.predict(X)
