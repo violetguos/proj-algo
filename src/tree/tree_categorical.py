@@ -76,6 +76,12 @@ class Node:
         Find the best one to split one at a time
         :return:
         """
+
+        # before trying to split, we see if this node is already pure
+        curr_unique = self.y.unique()
+        if len(curr_unique) == 1:
+            self.score = float('inf')
+
         for c in range(self.col_count):
             self.find_better_split(c)
         if self.is_leaf:
@@ -261,7 +267,6 @@ def main():
 
     # data cleaning
     df = cat_util.remove_missing_target(df, 'species')
-
 
     train_df, test_df = cat_util.split_train_test(df, train=0.8)
     train_df = train_df.reset_index(drop=True)
