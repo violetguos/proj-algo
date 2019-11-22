@@ -5,7 +5,7 @@ import pandas as pd
 from src import categutils as cat_util
 import time
 
-
+# NOTE: Do we still need this??
 class DecisionTreeRegressor:
     # TODO: borrowed
     def fit(self, X, y, min_leaf=5):
@@ -98,37 +98,46 @@ class Node:
         return self.score == float('inf')
 
     def predict(self, x):
-        return np.array([self.predict_col_helper(xi) for xi in x])
+        # predict row by row
+        res = []
+        for row in x:
+            res.append(self.predict_row_helper(row))
+        return np.array(res)
 
-    def predict_col_helper(self, xi):
+    def predict_row_helper(self, row):
         """
         Recurse helper
-        :param xi: each column in the df
+        :param row: each row in the df
         :return:
         """
+
         if self.is_leaf:
             return self.val
-
         # else, recurse left and right from current node
-        if xi[self.var_idx] <= self.split:
+        if row[self.var_idx] <= self.split.threshold:
             node = self.lhs
         else:
             node = self.rhs
-        return node.predict_col_helper(xi)
+        return node.predict_row_helper(row)
+
+def main():
+
+    df = pd.read_csv("../data/winequality-red.csv", sep=';')
+    train_df, test_df = cat_util.split_train_test(df)
+    # NOTE!!: this must be done, otherwise some strange indexing error in pandas
+    test_df = df[0:50]
+    X = test_df[["fixed acidity", "density"]]
+    print("type", type(X))
+    y = test_df["quality"]
+
+    start_time = time.time()
+
+    regressor = DecisionTreeRegressor().fit(X, y)
+    X = train_df[0:10]
+    preds = regressor.predict(X)
+    print(preds)
+    print("--- %s seconds ---" % (time.time() - start_time))
 
 
-df = pd.read_csv("../data/winequality-red.csv", sep=';')
-train_df, test_df = cat_util.split_train_test(df)
-# NOTE!!: this must be done, otherwise some strange indexing error in pandas
-test_df = df[0:50]
-X = test_df[["fixed acidity", "density"]]
-print("type", type(X))
-y = test_df["quality"]
-
-start_time = time.time()
-
-regressor = DecisionTreeRegressor().fit(X, y)
-X = train_df[0:10]
-preds = regressor.predict(X)
-print(preds)
-print("--- %s seconds ---" % (time.time() - start_time))
+if __name__ == '__main__':
+    main()

@@ -20,7 +20,14 @@ def split_train_test(df, train=0.60):
     test_df = df.loc[set(df.index) - set(train_df.index)] #get rest of index
     return train_df, test_df
 
-
+def remove_missing_target(df, target):
+    """
+    Function to remove all rows having a missing target (index is reset)
+    :param df: the original dataframe
+    :param target: key of the target column
+    :return:
+    """
+    return df.dropna(subset=[target]).reset_index(drop=True)
 
 class CategoricalUtil:
 

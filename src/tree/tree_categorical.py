@@ -256,9 +256,13 @@ class Node:
 
 
 def main():
-    filename = "../data/iris_data.csv"
+    filename = "../../data/iris_data.csv"
     df = cat_util.read_pd(filename)
-    # NOTE!!: this must be done, otherwise some strange indexing error in pandas
+
+    # data cleaning
+    df = cat_util.remove_missing_target(df, 'species')
+
+
     train_df, test_df = cat_util.split_train_test(df, train=0.8)
     train_df = train_df.reset_index(drop=True)
 
