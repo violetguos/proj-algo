@@ -6,21 +6,68 @@ import pandas as pd
 from src import categutils as cat_util
 import time
 from src import commons as dut
-
 import math
+
+
+def fast_log(x):
+    """
+    Tayloer series
+    𝑓(𝑥)=ln(𝑥)=(𝑥−1)−12(𝑥−1)2+13(𝑥−1)3−14(𝑥−1)4+⋯
+    :return: log_2(x)
+    """
+    ln_2 = 0.693147
+    ln_x = (x-1) - 0.5 * (x-1)*(x-1) + (x-1)* (x-1)*(x-1)/3 - (x-1)*(x-1)*(x-1)*(x-1) * 0.25
+
+    log_2_x = ln_x / ln_2
+
+    return log_2_x
+
+
+def merge_list(l1, l2):
+    """
+    Merge two lists or two items into a list, or an item and a list into a list, not a list of lists
+    :param l1:
+    :param l2:
+    :return:
+    """
+    if isinstance(l1, list) and isinstance(l2, list):
+        merged_list = l1 + l2
+    elif not isinstance(l1, list)  and isinstance(l2, list):
+        merged_list = [l1] + l2
+    elif isinstance(l1, list) and not isinstance(l2, list):
+        merged_list = l1 + [l2]
+    elif not isinstance(l1, list) and not isinstance(l2, list):
+        merged_list = [l1] + [l2]
+    return merged_list
+
+
+STR_CONTINUOUS = 'continuous'
+STR_CATEGOTICAL = 'categorical'
+
+class DataType:
+    def __init__(self, data_type):
+        self.data_type = data_type
+
+    @property
+    def continous(self):
+        return self.data_type == STR_CONTINUOUS
+
+    @property
+    def categorical(self):
+        return self.data_type == STR_CATEGOTICAL
 
 
 class DecisionTreeCatgorical:
 
-    def fit(self, X, y, label_set, min_leaf=5):
-        self.dtree = Node(X, y, np.array(np.arange(len(y))),label_set, min_leaf)
+    def fit(self, X, x_type, y, y_type, label_set, min_leaf=5):
+        self.dtree = Node(X, x_type, y, y_type, np.array(np.arange(len(y))),label_set, min_leaf)
         return self
 
     def predict(self, X):
         return self.dtree.predict(X.values)
 
 
-class Split:
+class SplitContinuous:
     def __init__(self, lhs, rhs, threshold):
         """
         # self.split has a tuple of 3 variables, (left, right, threshold)
@@ -43,9 +90,21 @@ class Split:
         print("lhs {} rhs {} threshold".format(self.lhs, self.rhs, self.threshold))
 
 
+class SplitCategorical:
+    def __init__(self, lhs, rhs):
+
+        self.lhs = lhs
+        self.rhs = rhs
+        self.print()
+
+    def print(self):
+        print(self.lhs)
+        print(self.rhs)
+
+
 class Node:
 
-    def __init__(self, x, y, idxs, label_set, min_leaf_count=5):
+    def __init__(self, x, x_data_type, y, y_data_type, idxs, label_set, min_leaf_count=5):
 
         """
         :param x: data column
@@ -56,7 +115,9 @@ class Node:
         :param label_set: the set of all labels in the dataset, deisgned to adapt to different datasets
         """
         self.x = x
+        self.x_data_type = x_data_type
         self.y = y
+        self.y_data_type = y_data_type
         self.idxs = idxs
 
         self.min_leaf_count = min_leaf_count
@@ -91,9 +152,8 @@ class Node:
         # after we found the newest LHS, and RHS, declare the new nodes
         # and store them inside self parameters
         # so we can run a prediction outside the scope by following these pointers
-        self.lhs = Node(self.x, self.y, self.best_lhs_indices, self.label_set)
-        self.rhs = Node(self.x, self.y, self.best_rhs_indices, self.label_set)
-
+        self.lhs = Node(self.x, self.x_data_type, self.y, self.y_data_type, self.best_lhs_indices, self.label_set)
+        self.rhs = Node(self.x, self.x_data_type, self.y, self.y_data_type, self.best_rhs_indices, self.label_set)
 
     def find_pure_in_splits(self, split):
         """
@@ -103,7 +163,7 @@ class Node:
         """
         lhs_unique = self.y[split.lhs].unique()
 
-        #print(lhs_unique)
+        # print(lhs_unique)
         # print(len(lhs_unique))
         rhs_unique = self.y[split.rhs].unique()
         if len(lhs_unique) == 1 or len(rhs_unique) == 1:
@@ -111,13 +171,104 @@ class Node:
         else:
             return False
 
+    def cat_split(self, var_idx):
+        # TODO: use the updated split method instead of a plain recursion
+        # print(var_idx)
+        unique = self.x.iloc[self.idxs, var_idx].unique()
+        # print(unique.size)
+        if unique.size == 1:
+            pass  # This is not really what we want, need to change this
+            # We will have to change it to, if unique.size=1, then don<t split on this variable.
+        else:  # if size >=2:
+            l = [[unique[0]], [unique[1]]]
+            if unique.size == 2:
 
+                return [SplitCategorical(l[0], l[1])] # only one possible split
+            else:
+                # n=3:
+                left = unique[0]
+                right = unique[1]
+                l = [left, right]
+                result = []
+                result.append([[unique[2]], l])  # 3, [1,2] - so putting 3 rd value alone
+                result.append([merge_list(unique[2], l[0]), [l[1]]])  # putting 3rd value on left side
+                result.append([[l[0]], merge_list(unique[2], l[1])]) # putting 3rd value on right side
+
+
+                final_result = []
+                if unique.size == 3:
+                    # convert to the TYPE split_Categorical
+                    for r in result:
+                        # i will iterate the left and the right
+                        lhs, rhs = [], []
+                        res1, res2 = r
+                        # for i in r:
+                        # this will iterate the whole table
+                        for j, val in self.x.iloc[self.idxs, var_idx].items():
+                            if val in res1:
+                                lhs.append(j)
+                            elif val in res2:
+                                rhs.append(j)
+
+                        # now convert the lhs and rhs into pd series
+                        # lhs = pd.Series(lhs)
+                        # rhs = pd.Series(rhs)
+                        split = SplitCategorical(lhs, rhs)
+                        final_result.append(split)
+
+                    return final_result
+                print("unique.size\n", unique.size)
+                for i in range(3, unique.size):  # for n = 4 to n max, equivalent to for i=3 to n-1
+                    l = result
+                    result = []  # to only return the splits with all the categories
+
+                    # adding new number alone to the left and putting the rest to the right
+                    result.append([[unique[i]], merge_list(l[0][0], l[0][1])])
+
+                    for j in range(0, 2 ** (i - 1) - 1):
+                        result.append([merge_list(unique[i], l[j][0]), [l[j][1]]]) # adding number to left
+                        result.append([[l[j][0]], merge_list(unique[i], l[j][1])])  # adding number to the right
+
+
+                final_result = []
+
+                for r in result:
+                    # i will iterate the left and the right
+                    lhs, rhs = [], []
+                    res1, res2 = r
+                    # for i in r:
+                    # this will iterate the whole table
+                    for j, val in self.x.iloc[self.idxs, var_idx].items():
+                        if val in res1:
+                            lhs.append(j)
+                        elif val in res2:
+                            rhs.append(j)
+
+                    # now convert the lhs and rhs into pd series
+                    # lhs = pd.Series(lhs)
+                    # rhs = pd.Series(rhs)
+                    split = SplitCategorical(lhs, rhs)
+                    final_result.append(split)
+                return final_result
 
     def find_better_split(self, var_idx):
         # this generates all the splits
-        # TODO: optimize this funciton
+        # splits = self.continuous_split(var_idx)
+
+        #  TODO: still testing cat split
+
         splits = self.cat_split(var_idx)
 
+
+
+        if splits is None:
+            # no more split in categorical X variable
+            self.score = float('inf')
+            return
+
+        print("split results\n", splits)
+        for i in splits:
+            print(i)
 
         # while not res
         # iter in list of splits
@@ -128,7 +279,8 @@ class Node:
             res = self.find_pure_in_splits(splits[i])
             i += 1
 
-        if res == True and i != len(splits)-1 and len(splits[i-1].lhs) >= self.min_leaf_count and len(splits[i-1].rhs) >= self.min_leaf_count:
+        # TODO: do we really need i != len(splits)-1
+        if res is True and i != len(splits)-1 and len(splits[i-1].lhs) >= self.min_leaf_count and len(splits[i-1].rhs) >= self.min_leaf_count:
             i -= 1
             self.var_idx = var_idx
             curr_score = self.find_score(splits[i])
@@ -155,7 +307,8 @@ class Node:
                     self.split = split
                     self.best_lhs_indices, self.best_rhs_indices = lhs, rhs
 
-    def cat_split(self, var_idx):
+    def continuous_split(self, var_idx):
+        # TODO: move this under class conti split
         """
         :param var_idx: the current column from def find_better_split(self)
         :return: all possible splits at this
@@ -172,15 +325,35 @@ class Node:
             left, right = list(), list()
             # print("type col", type(col))
             for index, col_val in col.items():
-                if col_val < threshold:
+                # take care of the nan values
+                if col_val == np.nan:
+                    rand = np.random.uniform()
+                    if rand < 0.5:
+                        left.append(index)
+                    else:
+                        right.append(index)
+                elif col_val < threshold:
                     # only append index of that row, not making a copy
                     left.append(index)
                 else:
                     right.append(index)
-        res.append(Split(left, right, threshold))
+        res.append(SplitContinuous(left, right, threshold))
         return res
 
+    def variance_ssr(self, lhs, rhs):
+        y_select = self.y[self.idxs]
+        mean_target_group1 = y_select[lhs].mean()
+        len_group1 = len(lhs)
+        mean_target_group2 = y_select[rhs].mean()
+        len_group2 = len(rhs)
+        mean_y = y_select.mean()
+        variance_SSR = len_group1 * (mean_target_group1 - mean_y)**2 + len_group2 * (mean_target_group2 - mean_y)**2
+        return variance_SSR
+
     def find_score(self, split, func='entropy'):
+        if self.y_data_type == STR_CONTINUOUS:
+            return self.variance_ssr(split.lhs, split.rhs)
+
         if func == 'gini':
             return self.gini(split)
         elif func == 'entropy':
@@ -207,11 +380,11 @@ class Node:
                 entropy = 0
                 for p in pk:
                     if p != 0:
-                        entropy += p * math.log2(p)
+                        entropy += p * fast_log(p)  #math.log2(p)
                 entropy = -1 * entropy
             two_subtrees_entropy += entropy
 
-        return  two_subtrees_entropy # Return entropy
+        return two_subtrees_entropy # Return entropy
 
 
     def gini(self, split):
@@ -263,22 +436,23 @@ class Node:
 
 
 def main():
-    filename = "../../data/iris_data.csv"
+    filename = "../../data/test_cart.csv"
     df = cat_util.read_pd(filename)
 
     # data cleaning
     df = cat_util.remove_missing_target(df, 'species')
 
-    train_df, test_df = cat_util.split_train_test(df, train=0.8)
+    train_df, test_df = cat_util.split_train_test(df, train=0.5)
     train_df = train_df.reset_index(drop=True)
 
     test_df = test_df.reset_index(drop=True)
     X = train_df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
     y = train_df["species"]
+    print(X)
 
     start_time = time.time()
 
-    regressor = DecisionTreeCatgorical().fit(X, y, range(3))
+    regressor = DecisionTreeCatgorical().fit(X, STR_CONTINUOUS, y, STR_CONTINUOUS, range(3))
     X = test_df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
     actual = test_df["species"]
     preds = regressor.predict(X)

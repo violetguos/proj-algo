@@ -127,7 +127,7 @@ class CategoricalUtil:
         unique = df[target].unique()
         # print(unique.size)
         if unique.size == 1:
-            return unique  # This is not really what we want, need to change this
+            return  # This is not really what we want, need to change this
             # We will have to change it to, if unique.size=1, then don<t split on this variable.
         else:  # if size >=2:
             l = [[unique[0]], [unique[1]]]
