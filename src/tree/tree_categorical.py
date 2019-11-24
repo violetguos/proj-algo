@@ -26,9 +26,9 @@ def fast_log(x):
 def merge_list(l1, l2):
     """
     Merge two lists or two items into a list, or an item and a list into a list, not a list of lists
-    :param l1:
-    :param l2:
-    :return:
+    :param l1: list or item
+    :param l2: list or item
+    :return: a list
     """
     if isinstance(l1, list) and isinstance(l2, list):
         merged_list = l1 + l2
@@ -57,7 +57,7 @@ class DataType:
         return self.data_type == STR_CATEGOTICAL
 
 
-class DecisionTreeCatgorical:
+class DecisionTree:
 
     def fit(self, X, x_type, y, y_type, label_set, min_leaf=5):
         self.dtree = Node(X, x_type, y, y_type, np.array(np.arange(len(y))),label_set, min_leaf)
@@ -174,6 +174,7 @@ class Node:
             return False
 
     def cat_split(self, var_idx):
+        print("catorigical split on X")
         # TODO: use the updated split method instead of a plain recursion
         # print(var_idx)
         unique = self.x.iloc[self.idxs, var_idx].unique()
@@ -276,17 +277,6 @@ class Node:
             res = self.find_pure_in_splits(splits[i])
             i += 1
 
-        # # TODO: do we really need i != len(splits)-1
-        # if res is True and i != len(splits)-1 and len(splits[i-1].lhs) >= self.min_leaf_count and len(splits[i-1].rhs) >= self.min_leaf_count:
-        #     i -= 1
-        #     self.var_idx = var_idx
-        #     curr_score = self.find_score(splits[i])
-        #     # NOTE: this is the line that makes it the global score
-        #     self.score = curr_score
-        #     self.split = splits[i]
-        #     self.best_lhs_indices, self.best_rhs_indices = splits[i].lhs, splits[i].rhs
-
-
         for split in splits:
             # split has 2 lists, now we assign them to the lhs and rhs
             # we store the indices of rows in a given `column[var_idx]`
@@ -312,7 +302,7 @@ class Node:
         """
         # this handles some indexing exceptions
         # no longer happens as of commit PR #2
-
+        # print("continous split in X")
         col = self.x.iloc[self.idxs, var_idx]
 
         unique = col.unique()
@@ -321,23 +311,23 @@ class Node:
         for threshold in unique:
             left, right = list(), list()
             # print("type col", type(col))
+            nan_vals = list()
             for index, col_val in col.items():
-                # take care of the nan values
-                if col_val == np.nan:
-                    rand = np.random.uniform()
-                    if rand < 0.5:
-                        left.append(index)
-                    else:
-                        right.append(index)
+                # this is how you check for the nan values without numpy or pandas
+                if col_val != col_val:
+                    nan_vals.append(index)
                 elif col_val < threshold:
                     # only append index of that row, not making a copy
                     left.append(index)
                 else:
                     right.append(index)
-        res.append(SplitContinuous(left, right, threshold))
+        # we try both cases, choose the side where nan is supposed to go by maximizing the split score
+        res.append(SplitContinuous(left + nan_vals, right, threshold))
+        res.append(SplitContinuous(left, right + nan_vals, threshold))
         return res
 
     def variance_ssr(self, lhs, rhs):
+        print("continous split with variance ssr of Y var")
         y_select = self.y[self.idxs]
         mean_target_group1 = y_select[lhs].mean()
         len_group1 = len(lhs)
@@ -352,8 +342,11 @@ class Node:
             return self.variance_ssr(split.lhs, split.rhs)
 
         if func == 'gini':
+            # print("cateogorical split on the Y, {}".format(func))
             return self.gini(split)
         elif func == 'entropy':
+            # print("cateogorical split on the Y, {}".format(func))
+
             return self.entropy(split)
 
     def entropy(self, split):
@@ -377,7 +370,7 @@ class Node:
                 entropy = 0
                 for p in pk:
                     if p != 0:
-                        entropy += p * fast_log(p)  #math.log2(p)
+                        entropy += p * fast_log(p)  # math.log2(p)
                 entropy = -1 * entropy
             two_subtrees_entropy += entropy
 
@@ -432,10 +425,10 @@ class Node:
         return node.predict_row_helper(row)
 
 
-def main():
-    filename = "../../data/test_cart.csv"
+def main_iris():
+    filename = "../../data/iris_data.csv"
     df = cat_util.read_pd(filename)
-
+    print("df", df.iloc[0].isnull())
     # data cleaning
     df = cat_util.remove_missing_target(df, 'species')
 
@@ -449,7 +442,7 @@ def main():
 
     start_time = time.time()
 
-    regressor = DecisionTreeCatgorical().fit(X, STR_CONTINUOUS, y, STR_CONTINUOUS, range(3))
+    regressor = DecisionTree().fit(X, STR_CONTINUOUS, y, STR_CATEGOTICAL, range(3))
     X = test_df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
     actual = test_df["species"]
     preds = regressor.predict(X)
@@ -461,5 +454,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main_iris()
 
