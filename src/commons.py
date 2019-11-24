@@ -2,6 +2,8 @@
 # TODO: plot the runtime with different functions, with threading, etc
 from csv import reader
 from random import randrange
+import numpy as np
+import pandas as pd
 
 # DATAUTILS
 def load_csv(filename):
@@ -62,3 +64,17 @@ def subsample(dataset, ratio):
         index = randrange(len(dataset))
         sample.append(dataset[index])
     return sample
+
+
+def gen_confusion_matrix(true, pred):
+    combined = np.append(true, pred)
+    combined_codes = pd.Categorical(combined).codes  # map categories to : 0 to n-1
+    half = len(combined_codes) // 2  # gives int
+    true_i = combined_codes[0:half]
+    pred_i = combined_codes[half:len(combined_codes)]
+
+    k = len(np.unique(true_i))  # number of classes
+    result = np.zeros((k, k))  # build matrix (not really a matrix, is an array) of K by K
+    for i in range(len(true)):  # for every observation
+        result[true_i[i]][pred_i[i]] += 1  # add + 1 to the combination
+    return result, np.unique(true)

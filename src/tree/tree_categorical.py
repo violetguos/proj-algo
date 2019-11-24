@@ -447,12 +447,18 @@ def main_iris():
     actual = test_df["species"]
     preds = regressor.predict(X)
     print("preds", preds)
+    conf_mat = dut.gen_confusion_matrix(actual, preds)
+    print(conf_mat)
     print("--- %s seconds ---" % (time.time() - start_time))
 
     accuracy = dut.accuracy_metric(actual.values, preds)
     print(accuracy)
 
 
+def main_adults():
+    pass
+
+
 if __name__ == '__main__':
-    main_iris()
+    main_adults()
 
