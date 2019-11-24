@@ -119,6 +119,8 @@ class Node:
         self.y = y
         self.y_data_type = y_data_type
         self.idxs = idxs
+        self.split_method = self.cat_split if x_data_type == STR_CATEGOTICAL else self.continuous_split
+
 
         self.min_leaf_count = min_leaf_count
         self.row_count = len(idxs)
@@ -256,19 +258,14 @@ class Node:
         # splits = self.continuous_split(var_idx)
 
         #  TODO: still testing cat split
-
-        splits = self.cat_split(var_idx)
-
-
+        splits = self.split_method(var_idx)
+        #splits = self.cat_split(var_idx)
 
         if splits is None:
             # no more split in categorical X variable
             self.score = float('inf')
             return
 
-        print("split results\n", splits)
-        for i in splits:
-            print(i)
 
         # while not res
         # iter in list of splits
@@ -279,33 +276,33 @@ class Node:
             res = self.find_pure_in_splits(splits[i])
             i += 1
 
-        # TODO: do we really need i != len(splits)-1
-        if res is True and i != len(splits)-1 and len(splits[i-1].lhs) >= self.min_leaf_count and len(splits[i-1].rhs) >= self.min_leaf_count:
-            i -= 1
-            self.var_idx = var_idx
-            curr_score = self.find_score(splits[i])
-            # NOTE: this is the line that makes it the global score
-            self.score = curr_score
-            self.split = splits[i]
-            self.best_lhs_indices, self.best_rhs_indices = splits[i].lhs, splits[i].rhs
+        # # TODO: do we really need i != len(splits)-1
+        # if res is True and i != len(splits)-1 and len(splits[i-1].lhs) >= self.min_leaf_count and len(splits[i-1].rhs) >= self.min_leaf_count:
+        #     i -= 1
+        #     self.var_idx = var_idx
+        #     curr_score = self.find_score(splits[i])
+        #     # NOTE: this is the line that makes it the global score
+        #     self.score = curr_score
+        #     self.split = splits[i]
+        #     self.best_lhs_indices, self.best_rhs_indices = splits[i].lhs, splits[i].rhs
 
-        else:
-            for split in splits:
-                # split has 2 lists, now we assign them to the lhs and rhs
-                # we store the indices of rows in a given `column[var_idx]`
-                lhs = pd.Series(split.lhs)
-                rhs = pd.Series(split.rhs)
 
-                if rhs.size < self.min_leaf_count or lhs.size < self.min_leaf_count:
-                    continue
+        for split in splits:
+            # split has 2 lists, now we assign them to the lhs and rhs
+            # we store the indices of rows in a given `column[var_idx]`
+            lhs = pd.Series(split.lhs)
+            rhs = pd.Series(split.rhs)
 
-                curr_score = self.find_score(split)
-                if curr_score < self.score:
-                    self.var_idx = var_idx
-                    # NOTE: this is the line that makes it the global score
-                    self.score = curr_score
-                    self.split = split
-                    self.best_lhs_indices, self.best_rhs_indices = lhs, rhs
+            if rhs.size < self.min_leaf_count or lhs.size < self.min_leaf_count:
+                continue
+
+            curr_score = self.find_score(split)
+            if curr_score < self.score:
+                self.var_idx = var_idx
+                # NOTE: this is the line that makes it the global score
+                self.score = curr_score
+                self.split = split
+                self.best_lhs_indices, self.best_rhs_indices = lhs, rhs
 
     def continuous_split(self, var_idx):
         # TODO: move this under class conti split
