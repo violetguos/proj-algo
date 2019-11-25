@@ -7,7 +7,7 @@ from src import categutils as cat_util
 import time
 from src import commons as dut
 import math
-
+from sklearn.preprocessing import LabelEncoder
 
 def fast_log(x):
     """
@@ -42,7 +42,7 @@ def merge_list(l1, l2):
 
 
 STR_CONTINUOUS = 'continuous'
-STR_CATEGOTICAL = 'categorical'
+STR_CATEGORICAL = 'categorical'
 
 class DataType:
     def __init__(self, data_type):
@@ -54,7 +54,7 @@ class DataType:
 
     @property
     def categorical(self):
-        return self.data_type == STR_CATEGOTICAL
+        return self.data_type == STR_CATEGORICAL
 
 
 class DecisionTree:
@@ -91,15 +91,17 @@ class SplitContinuous:
 
 
 class SplitCategorical:
-    def __init__(self, lhs, rhs):
+    def __init__(self, lhs, rhs, lhs_vals, rhs_vals):
 
         self.lhs = lhs
         self.rhs = rhs
-        self.print()
+        self.lhs_vals = lhs_vals
+        self.rhs_vals = rhs_vals
+        # self.print()
 
     def print(self):
-        print(self.lhs)
-        print(self.rhs)
+        print("lhs cat ", self.lhs)
+        print("rhs cat ", self.rhs)
 
 
 class Node:
@@ -119,7 +121,7 @@ class Node:
         self.y = y
         self.y_data_type = y_data_type
         self.idxs = idxs
-        self.split_method = self.cat_split if x_data_type == STR_CATEGOTICAL else self.continuous_split
+        self.split_method = self.cat_split if x_data_type == STR_CATEGORICAL else self.continuous_split
 
 
         self.min_leaf_count = min_leaf_count
@@ -163,6 +165,7 @@ class Node:
         If a subtree contains pure y labels,  we don't check the rest
         :return:
         """
+        # split.print()
         lhs_unique = self.y[split.lhs].unique()
 
         # print(lhs_unique)
@@ -174,7 +177,7 @@ class Node:
             return False
 
     def cat_split(self, var_idx):
-        print("catorigical split on X")
+
         # TODO: use the updated split method instead of a plain recursion
         # print(var_idx)
         unique = self.x.iloc[self.idxs, var_idx].unique()
@@ -184,9 +187,29 @@ class Node:
             # We will have to change it to, if unique.size=1, then don<t split on this variable.
         else:  # if size >=2:
             l = [[unique[0]], [unique[1]]]
-            if unique.size == 2:
 
-                return [SplitCategorical(l[0], l[1])] # only one possible split
+            if unique.size == 2:
+                # this l[0] l[1] needs to be converted to the row indices
+                final_result = []
+
+                # i will iterate the left and the right
+                lhs, rhs = [], []
+                res1, res2 = l[0], l[1]
+                # for i in r:
+                # this will iterate the whole table
+                for j, val in self.x.iloc[self.idxs, var_idx].items():
+                    if val ==l[0]:
+                        lhs.append(j)
+                    elif val == l[1]:
+                        rhs.append(j)
+
+                # now convert the lhs and rhs into pd series
+                # lhs = pd.Series(lhs)
+                # rhs = pd.Series(rhs)
+                split = SplitCategorical(lhs, rhs, [l[0]], [l[1]])
+                final_result.append(split)
+
+                return final_result # only one possible split
             else:
                 # n=3:
                 left = unique[0]
@@ -216,11 +239,11 @@ class Node:
                         # now convert the lhs and rhs into pd series
                         # lhs = pd.Series(lhs)
                         # rhs = pd.Series(rhs)
-                        split = SplitCategorical(lhs, rhs)
+                        split = SplitCategorical(lhs, rhs, res1, res2)
                         final_result.append(split)
 
                     return final_result
-                print("unique.size\n", unique.size)
+                # print("unique.size\n", unique.size)
                 for i in range(3, unique.size):  # for n = 4 to n max, equivalent to for i=3 to n-1
                     l = result
                     result = []  # to only return the splits with all the categories
@@ -250,7 +273,7 @@ class Node:
                     # now convert the lhs and rhs into pd series
                     # lhs = pd.Series(lhs)
                     # rhs = pd.Series(rhs)
-                    split = SplitCategorical(lhs, rhs)
+                    split = SplitCategorical(lhs, rhs, res1, res2)
                     final_result.append(split)
                 return final_result
 
@@ -302,10 +325,11 @@ class Node:
         """
         # this handles some indexing exceptions
         # no longer happens as of commit PR #2
-        # print("continous split in X")
+        print("continous split in X")
         col = self.x.iloc[self.idxs, var_idx]
 
         unique = col.unique()
+        print(unique)
 
         res = list()
         for threshold in unique:
@@ -418,11 +442,20 @@ class Node:
         if self.is_leaf:
             return self.val
         # else, recurse left and right from current node
-        if row[self.var_idx] <= self.split.threshold:
-            node = self.lhs
-        else:
-            node = self.rhs
-        return node.predict_row_helper(row)
+        if self.x_data_type == STR_CATEGORICAL:
+            if row[self.var_idx] in self.split.lhs_vals:
+                node = self.lhs
+            else:
+                node = self.rhs
+            return node.predict_row_helper(row)
+        elif self.x_data_type == STR_CONTINUOUS:
+            print("row[self.var_idx]", row[self.var_idx])
+            print("self.split.threshold", self.split.threshold)
+            if row[self.var_idx] < self.split.threshold:
+                node = self.lhs
+            else:
+                node = self.rhs
+            return node.predict_row_helper(row)
 
 
 def main_iris():
@@ -442,7 +475,7 @@ def main_iris():
 
     start_time = time.time()
 
-    regressor = DecisionTree().fit(X, STR_CONTINUOUS, y, STR_CATEGOTICAL, range(3))
+    regressor = DecisionTree().fit(X, STR_CONTINUOUS, y, STR_CATEGORICAL, range(3))
     X = test_df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
     actual = test_df["species"]
     preds = regressor.predict(X)
@@ -456,9 +489,49 @@ def main_iris():
 
 
 def main_adults():
-    pass
+    filename = "../../data/adult.csv"
+    df = cat_util.read_pd(filename)
+
+    yencode = LabelEncoder().fit(df["income"])
+    train_df, _ = cat_util.split_train_test(df, train=0.01)
+    train_df = train_df.reset_index(drop=True)
+
+    X = train_df[["workclass","marital.status","relationship","race","sex"]]
+    y = train_df["income"]
+    # print(X)
+    regressor = DecisionTree().fit(X, STR_CATEGORICAL, y, STR_CATEGORICAL, range(2))
+
+    # hack the funciton to run on a subset
+    test_df, _ = cat_util.split_train_test(df, train=0.01)
+    X = test_df[["workclass","marital.status","relationship","race","sex"]]
+    actual = test_df["income"]
+    preds = regressor.predict(X)
+    conf_mat = dut.gen_confusion_matrix(actual, preds)
+    accuracy = dut.accuracy_metric(actual.values, preds)
+
+    print(conf_mat)
+    print(accuracy)
+
+
+def main_continuous():
+
+    df = pd.read_csv("../../data/winequality-red.csv", sep=';')
+    train_df, test_df = cat_util.split_train_test(df)
+    # NOTE!!: this must be done, otherwise some strange indexing error in pandas
+    test_df = df[0:50]
+    X = test_df[["fixed acidity", "density"]]
+    print("type", type(X))
+    y = test_df["quality"]
+
+    start_time = time.time()
+
+    regressor = DecisionTree().fit(X, STR_CONTINUOUS, y, STR_CONTINUOUS, None, min_leaf=5)
+    X = train_df[0:10]
+    preds = regressor.predict(X)
+    print(preds)
+    print("--- %s seconds ---" % (time.time() - start_time))
 
 
 if __name__ == '__main__':
-    main_adults()
+    main_continuous()
 

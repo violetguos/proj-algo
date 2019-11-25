@@ -113,8 +113,9 @@ class Node:
 
         if self.is_leaf:
             return self.val
-        # else, recurse left and right from current node
-        if row[self.var_idx] <= self.split.threshold:
+
+            # else, recurse left and right from current node
+        if row[self.var_idx] <= self.split:
             node = self.lhs
         else:
             node = self.rhs
@@ -135,6 +136,8 @@ def main():
     regressor = DecisionTreeRegressor().fit(X, y)
     X = train_df[0:10]
     preds = regressor.predict(X)
+
+    print("*"*20)
     print(preds)
     print("--- %s seconds ---" % (time.time() - start_time))
 
