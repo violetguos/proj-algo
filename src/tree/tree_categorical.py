@@ -8,6 +8,7 @@ import time
 from src import commons as dut
 import math
 from sklearn.preprocessing import LabelEncoder
+from src.const import STR_CATEGORICAL, STR_CONTINUOUS
 
 def fast_log(x):
     """
@@ -41,8 +42,8 @@ def merge_list(l1, l2):
     return merged_list
 
 
-STR_CONTINUOUS = 'continuous'
-STR_CATEGORICAL = 'categorical'
+# STR_CONTINUOUS = 'continuous'
+# STR_CATEGORICAL = 'categorical'
 
 class DataType:
     def __init__(self, data_type):
@@ -127,7 +128,7 @@ class Node:
         self.min_leaf_count = min_leaf_count
         self.row_count = len(idxs)
         self.col_count = x.shape[1]
-        self.val = y[idxs].mode()[0]
+        self.val = y[idxs].mode()[0] if y_data_type == STR_CATEGORICAL else np.mean(y[idxs])
         self.score = float('inf')
         self.label_set = label_set
 
@@ -325,11 +326,9 @@ class Node:
         """
         # this handles some indexing exceptions
         # no longer happens as of commit PR #2
-        print("continous split in X")
         col = self.x.iloc[self.idxs, var_idx]
 
         unique = col.unique()
-        print(unique)
 
         res = list()
         for threshold in unique:
@@ -351,7 +350,6 @@ class Node:
         return res
 
     def variance_ssr(self, lhs, rhs):
-        print("continous split with variance ssr of Y var")
         y_select = self.y[self.idxs]
         mean_target_group1 = y_select[lhs].mean()
         len_group1 = len(lhs)
@@ -449,8 +447,7 @@ class Node:
                 node = self.rhs
             return node.predict_row_helper(row)
         elif self.x_data_type == STR_CONTINUOUS:
-            print("row[self.var_idx]", row[self.var_idx])
-            print("self.split.threshold", self.split.threshold)
+
             if row[self.var_idx] < self.split.threshold:
                 node = self.lhs
             else:
@@ -503,6 +500,8 @@ def main_adults():
 
     # hack the funciton to run on a subset
     test_df, _ = cat_util.split_train_test(df, train=0.01)
+    test_df = test_df.reset_index(drop=True)
+
     X = test_df[["workclass","marital.status","relationship","race","sex"]]
     actual = test_df["income"]
     preds = regressor.predict(X)
@@ -515,23 +514,34 @@ def main_adults():
 
 def main_continuous():
 
-    df = pd.read_csv("../../data/winequality-red.csv", sep=';')
+    df = pd.read_csv("../../data/housing.csv", sep=r"\s+")
     train_df, test_df = cat_util.split_train_test(df)
+    train_df = train_df.reset_index(drop=True)
+
+    test_df = test_df.reset_index(drop=True)
+
     # NOTE!!: this must be done, otherwise some strange indexing error in pandas
-    test_df = df[0:50]
-    X = test_df[["fixed acidity", "density"]]
-    print("type", type(X))
-    y = test_df["quality"]
+    column_names = ['CRIM', 'ZN', 'INDUS', 'CHAS', 'NOX', 'RM', 'AGE', 'DIS', 'RAD', 'TAX', 'PTRATIO', 'B', 'LSTAT']
+    X = train_df[column_names]
+    y = train_df["MEDV"]
 
     start_time = time.time()
 
     regressor = DecisionTree().fit(X, STR_CONTINUOUS, y, STR_CONTINUOUS, None, min_leaf=5)
-    X = train_df[0:10]
+    X = test_df[column_names]
+    y = test_df["MEDV"]
     preds = regressor.predict(X)
-    print(preds)
+
+    acc = dut.mse_metric(y.values, preds)
+    print("acc", acc)
+    print(y.values)
+    print(len(preds))
     print("--- %s seconds ---" % (time.time() - start_time))
 
 
 if __name__ == '__main__':
     main_continuous()
+    main_adults()
+    main_iris()
+
 

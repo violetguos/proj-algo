@@ -49,12 +49,21 @@ def cross_validation_split(dataset, n_folds):
     return dataset_split
 
 # Calculate accuracy percentage
+def mse_metric(actual, predicted):
+    correct = 0
+    for i in range(len(actual)):
+        correct += (actual[i] - predicted[i]) ** 2
+    return np.sqrt(correct)
+
+
+# Calculate accuracy percentage
 def accuracy_metric(actual, predicted):
     correct = 0
     for i in range(len(actual)):
         if actual[i] == predicted[i]:
             correct += 1
     return correct / float(len(actual)) * 100.0
+
 
 # Create a random subsample from the dataset with replacement
 def subsample(dataset, ratio):
