@@ -3,7 +3,6 @@
 # reference:  https://levelup.gitconnected.com/building-a-decision-tree-from-scratch-in-python-machine-learning-from-scratch-part-ii-6e2e56265b19
 import numpy as np
 import pandas as pd
-from src import categutils as cat_util
 import time
 from src import commons as dut
 import math
@@ -457,12 +456,12 @@ class Node:
 
 def main_iris():
     filename = "../../data/iris_data.csv"
-    df = cat_util.read_pd(filename)
+    df = dut.read_pd(filename)
     print("df", df.iloc[0].isnull())
     # data cleaning
-    df = cat_util.remove_missing_target(df, 'species')
+    df = dut.remove_missing_target(df, 'species')
 
-    train_df, test_df = cat_util.split_train_test(df, train=0.5)
+    train_df, test_df = dut.split_train_test(df, train=0.5)
     train_df = train_df.reset_index(drop=True)
 
     test_df = test_df.reset_index(drop=True)
@@ -487,10 +486,10 @@ def main_iris():
 
 def main_adults():
     filename = "../../data/adult.csv"
-    df = cat_util.read_pd(filename)
+    df = dut.read_pd(filename)
 
     yencode = LabelEncoder().fit(df["income"])
-    train_df, _ = cat_util.split_train_test(df, train=0.01)
+    train_df, _ = dut.split_train_test(df, train=0.01)
     train_df = train_df.reset_index(drop=True)
 
     X = train_df[["workclass","marital.status","relationship","race","sex"]]
@@ -499,7 +498,7 @@ def main_adults():
     regressor = DecisionTree().fit(X, STR_CATEGORICAL, y, STR_CATEGORICAL, range(2))
 
     # hack the funciton to run on a subset
-    test_df, _ = cat_util.split_train_test(df, train=0.01)
+    test_df, _ = dut.split_train_test(df, train=0.01)
     test_df = test_df.reset_index(drop=True)
 
     X = test_df[["workclass","marital.status","relationship","race","sex"]]
@@ -515,7 +514,7 @@ def main_adults():
 def main_continuous():
 
     df = pd.read_csv("../../data/housing.csv", sep=r"\s+")
-    train_df, test_df = cat_util.split_train_test(df)
+    train_df, test_df = dut.split_train_test(df)
     train_df = train_df.reset_index(drop=True)
 
     test_df = test_df.reset_index(drop=True)

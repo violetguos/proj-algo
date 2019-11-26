@@ -3,7 +3,6 @@
 
 import time
 import numpy as np
-from src import categutils as cat_util
 from src import commons as dut
 
 from src.tree.tree_categorical import DecisionTree
@@ -96,11 +95,11 @@ def main():
     column_names = ["sepal_length", "sepal_width", "petal_length", "petal_width"]
     target_name = "species"
     print("Experiment using row sampling")
-    forest = Forest(5, cat_util.bootstrap_sample, column_names, target_name, STR_CONTINUOUS, STR_CATEGORICAL)
+    forest = Forest(5, dut.bootstrap_sample, column_names, target_name, STR_CONTINUOUS, STR_CATEGORICAL)
 
     filename = "../data/iris_data.csv"
-    df = cat_util.read_pd(filename)
-    train_df, test_df = cat_util.split_train_test(df, train=0.8)
+    df = dut.read_pd(filename)
+    train_df, test_df = dut.split_train_test(df, train=0.8)
     train_df = train_df.reset_index(drop=True)
 
     test_df = test_df.reset_index(drop=True)
@@ -124,12 +123,12 @@ def main_conti():
     print("Experiment using row sampling")
     column_names = ['CRIM', 'ZN', 'INDUS', 'CHAS', 'NOX', 'RM', 'AGE', 'DIS', 'RAD', 'TAX', 'PTRATIO', 'B', 'LSTAT']
     target_name = "MEDV"
-    forest = Forest(2, cat_util.bootstrap_sample, column_names, target_name, STR_CONTINUOUS, STR_CONTINUOUS)
+    forest = Forest(3, dut.bootstrap_sample, column_names, target_name, STR_CONTINUOUS, STR_CONTINUOUS)
 
     filename = "../data/housing.csv"
     df = pd.read_csv(filename, sep=r"\s+")
     # NOTE!!: this must be done, otherwise some strange indexing error in pandas
-    train_df, test_df = cat_util.split_train_test(df, train=0.8)
+    train_df, test_df = dut.split_train_test(df, train=0.8)
     train_df = train_df.reset_index(drop=True)
 
     test_df = test_df.reset_index(drop=True)
