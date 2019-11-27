@@ -52,10 +52,10 @@ class Forest():
 
         for i in range(self.tree_num):
             df_subset = self.sampler(df, sample=0.7)
-
+            # df_subset = df
             X = df_subset[self.column_names]
             y = df_subset[self.target_name]
-            tree = DecisionTree().fit(X, self.x_type, y, self.y_type, range(3))
+            tree = DecisionTree().fit(X, self.x_type, y, self.y_type, range(3),  min_leaf=20)
             self.tree_arr.append(tree)
 
     def predict(self, X):
@@ -82,7 +82,7 @@ class Forest():
                 self.res.append(np.argmax(counts))
         else:
             self.res_arr = np.array(self.res_arr)
-            print("res arr shape", self.res_arr.shape)
+            print("res arr shape", self.res_arr[:,0].shape)
             for i in range(len(X.index)):
                 self.res.append(np.mean(self.res_arr[:,i]))
 
@@ -123,7 +123,7 @@ def main_conti():
     print("Experiment using row sampling")
     column_names = ['CRIM', 'ZN', 'INDUS', 'CHAS', 'NOX', 'RM', 'AGE', 'DIS', 'RAD', 'TAX', 'PTRATIO', 'B', 'LSTAT']
     target_name = "MEDV"
-    forest = Forest(3, dut.bootstrap_sample, column_names, target_name, STR_CONTINUOUS, STR_CONTINUOUS)
+    forest = Forest(5, dut.bootstrap_sample, column_names, target_name, STR_CONTINUOUS, STR_CONTINUOUS)
 
     filename = "../data/housing.csv"
     df = pd.read_csv(filename, sep=r"\s+")
@@ -132,8 +132,6 @@ def main_conti():
     train_df = train_df.reset_index(drop=True)
 
     test_df = test_df.reset_index(drop=True)
-
-
 
     start_time = time.time()
 
@@ -152,5 +150,5 @@ def main_conti():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
     main_conti()

@@ -52,9 +52,10 @@ def cross_validation_split(dataset, n_folds):
 # Calculate accuracy percentage
 def mse_metric(actual, predicted):
     correct = 0
+    print(len(actual))
     for i in range(len(actual)):
         correct += (actual[i] - predicted[i]) ** 2
-    return np.sqrt(correct) / len(actual)
+    return correct / len(actual)
 
 
 # Calculate accuracy percentage

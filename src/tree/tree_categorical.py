@@ -40,27 +40,10 @@ def merge_list(l1, l2):
         merged_list = [l1] + [l2]
     return merged_list
 
-
-# STR_CONTINUOUS = 'continuous'
-# STR_CATEGORICAL = 'categorical'
-
-class DataType:
-    def __init__(self, data_type):
-        self.data_type = data_type
-
-    @property
-    def continous(self):
-        return self.data_type == STR_CONTINUOUS
-
-    @property
-    def categorical(self):
-        return self.data_type == STR_CATEGORICAL
-
-
 class DecisionTree:
 
     def fit(self, X, x_type, y, y_type, label_set, min_leaf=5):
-        self.dtree = Node(X, x_type, y, y_type, np.array(np.arange(len(y))),label_set, min_leaf)
+        self.dtree = Node(X, x_type, y, y_type, np.array(np.arange(len(y))), label_set, min_leaf)
         return self
 
     def predict(self, X):
@@ -195,10 +178,11 @@ class Node:
                 # i will iterate the left and the right
                 lhs, rhs = [], []
                 res1, res2 = l[0], l[1]
+
                 # for i in r:
                 # this will iterate the whole table
                 for j, val in self.x.iloc[self.idxs, var_idx].items():
-                    if val ==l[0]:
+                    if val == l[0]:
                         lhs.append(j)
                     elif val == l[1]:
                         rhs.append(j)
@@ -349,14 +333,27 @@ class Node:
         return res
 
     def variance_ssr(self, lhs, rhs):
-        y_select = self.y[self.idxs]
-        mean_target_group1 = y_select[lhs].mean()
-        len_group1 = len(lhs)
-        mean_target_group2 = y_select[rhs].mean()
-        len_group2 = len(rhs)
-        mean_y = y_select.mean()
-        variance_SSR = len_group1 * (mean_target_group1 - mean_y)**2 + len_group2 * (mean_target_group2 - mean_y)**2
-        return variance_SSR
+        y_select = self.y.iloc[self.idxs]
+
+        lhs_std = y_select[lhs].std()
+        rhs_std = y_select[rhs].std()
+        return lhs_std * len(lhs) + rhs_std * len(rhs)
+
+
+        # y_select = self.y.iloc[self.idxs]
+        # # print(type(self.idxs))
+        # mean_target_group1 = y_select[lhs].mean()
+        #
+        # len_group1 = len(lhs)
+        # mean_target_group2 = y_select[rhs].mean()
+        # len_group2 = len(rhs)
+        # # print(type(np.array(lhs)))
+        # # assert(np.array(lhs) in self.idxs)
+        # # assert(rhs in self.idxs)
+        #
+        # mean_y = y_select.mean()
+        # variance_SSR = len_group1 * (mean_target_group1 - mean_y)**2 + len_group2 * (mean_target_group2 - mean_y)**2
+        # return variance_SSR
 
     def find_score(self, split, func='entropy'):
         if self.y_data_type == STR_CONTINUOUS:
@@ -526,7 +523,7 @@ def main_continuous():
 
     start_time = time.time()
 
-    regressor = DecisionTree().fit(X, STR_CONTINUOUS, y, STR_CONTINUOUS, None, min_leaf=5)
+    regressor = DecisionTree().fit(X, STR_CONTINUOUS, y, STR_CONTINUOUS, None, min_leaf=20)
     X = test_df[column_names]
     y = test_df["MEDV"]
     preds = regressor.predict(X)
@@ -540,7 +537,7 @@ def main_continuous():
 
 if __name__ == '__main__':
     main_continuous()
-    main_adults()
-    main_iris()
+    # main_adults()
+    # main_iris()
 
 
