@@ -103,6 +103,7 @@ class Node:
         self.x_data_type = x_data_type
         self.y = y
         self.y_data_type = y_data_type
+        # row idxs
         self.idxs = idxs
 
         # can delete this
@@ -111,7 +112,7 @@ class Node:
 
         self.min_leaf_count = min_leaf_count
         self.row_count = len(idxs)
-        self.col_count = x.shape[1]
+        self.col_count = len(list(x.columns))
         self.val = y[idxs].mode()[0] if y_data_type == STR_CATEGORICAL else np.mean(y[idxs])
         self.score = float('inf')
         self.label_set = label_set
@@ -445,7 +446,8 @@ class Node:
             return node.predict_row_helper(row)
 
 
-def check_col_type(cols, df):
+def check_col_type(df):
+    cols = list(df.columns)
     col_types = []
     for idx in cols:
         col = df[idx]
@@ -471,7 +473,7 @@ def main_iris():
     X = train_df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
     y = train_df["species"]
 
-    x_col_types = check_col_type(["sepal_length", "sepal_width", "petal_length", "petal_width"], train_df)
+    x_col_types = check_col_type(train_df)
     print(x_col_types)
     start_time = time.time()
 
@@ -498,7 +500,7 @@ def main_adults():
     X = train_df[["workclass","marital.status","relationship","race","sex"]]
     y = train_df["income"]
 
-    x_col_types = check_col_type(["workclass","marital.status",  "education.num", "relationship","race","sex"], train_df)
+    x_col_types = check_col_type(train_df)
     print(x_col_types)
     regressor = DecisionTree().fit(X, x_col_types, y, STR_CATEGORICAL, range(2))
 
@@ -528,7 +530,7 @@ def main_continuous():
     column_names = ['CRIM', 'ZN', 'INDUS', 'CHAS', 'NOX', 'RM', 'AGE', 'DIS', 'RAD', 'TAX', 'PTRATIO', 'B', 'LSTAT']
     X = train_df[column_names]
     y = train_df["MEDV"]
-    x_col_types = check_col_type(column_names, train_df)
+    x_col_types = check_col_type(train_df)
     print("check_col_type", x_col_types)
     start_time = time.time()
 
@@ -548,12 +550,12 @@ def main_continuous():
 
 if __name__ == '__main__':
 
-    # main_continuous()
+    main_continuous()
     # print("*"*20)
     # print(" "*20)
     main_adults()
     # print("*"*20)
     # print(" "*20)
-    # main_iris()
+    main_iris()
 
 

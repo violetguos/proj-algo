@@ -5,7 +5,7 @@ import time
 import numpy as np
 from src import commons as dut
 
-from src.tree.tree_categorical import DecisionTree
+from src.tree.tree_categorical import DecisionTree, check_col_type
 import pandas as pd
 from src.const import STR_CATEGORICAL, STR_CONTINUOUS
 
@@ -51,11 +51,13 @@ class Forest():
         """
 
         for i in range(self.tree_num):
-            df_subset = self.sampler(df, sample=0.7)
+            df_subset = self.sampler(df, sample=0.9)
             # df_subset = df
-            X = df_subset[self.column_names]
+            X = dut.column_sample(df_subset)
+            # X = df_subset[self.column_names]
             y = df_subset[self.target_name]
-            tree = DecisionTree().fit(X, self.x_type, y, self.y_type, range(3),  min_leaf=20)
+            x_type = check_col_type(X)
+            tree = DecisionTree().fit(X, x_type, y, self.y_type, range(3),  min_leaf=20)
             self.tree_arr.append(tree)
 
     def predict(self, X):
@@ -70,15 +72,16 @@ class Forest():
 
         if self.y_type == STR_CATEGORICAL:
             self.res_arr = np.array(self.res_arr)
-            self.res_arr = self.res_arr.astype(int)
+            # self.res_arr = self.res_arr.astype(int)
 
             # TODO: potential discuss how to speed this up
             # can try  prof's array indexing tricks??
             for i in range(len(X.index)):
                 # this `[:,i]` array indexing enables us to look at each column
                 # this is the majority count of a 2D matrix in np array format
-                counts = np.bincount(self.res_arr[:,i])
-                self.res.append(np.argmax(counts))
+                items, counts = np.unique(self.res_arr[:,i], return_counts=True)
+                # counts = np.bincount(self.res_arr[:,i])
+                self.res.append(items[np.argmax(counts)])
         else:
             self.res_arr = np.array(self.res_arr)
             # print("res arr shape", self.res_arr[:,0].shape)
@@ -94,16 +97,18 @@ def main():
     column_names = ["sepal_length", "sepal_width", "petal_length", "petal_width"]
     target_name = "species"
     print("Experiment using row sampling")
-    forest = Forest(5, dut.bootstrap_sample, column_names, target_name, STR_CONTINUOUS, STR_CATEGORICAL)
+
 
     filename = "../data/iris_data.csv"
-    df = dut.read_pd(filename)
+    df = pd.read_csv(filename)
     train_df, test_df = dut.split_train_test(df, train=0.8)
     train_df = train_df.reset_index(drop=True)
-
+    x_col_types = check_col_type(train_df)
+    print(x_col_types)
     test_df = test_df.reset_index(drop=True)
 
     start_time = time.time()
+    forest = Forest(50, dut.bootstrap_sample, column_names, target_name, x_col_types, STR_CATEGORICAL)
 
     forest.fit(train_df)
 
@@ -122,7 +127,6 @@ def main_conti():
     print("Experiment using row sampling")
     column_names = ['CRIM', 'ZN', 'INDUS', 'CHAS', 'NOX', 'RM', 'AGE', 'DIS', 'RAD', 'TAX', 'PTRATIO', 'B', 'LSTAT']
     target_name = "MEDV"
-    forest = Forest(5, dut.bootstrap_sample, column_names, target_name, STR_CONTINUOUS, STR_CONTINUOUS)
 
     filename = "../data/housing.csv"
     df = pd.read_csv(filename, sep=r"\s+")
@@ -131,6 +135,8 @@ def main_conti():
     train_df = train_df.reset_index(drop=True)
 
     test_df = test_df.reset_index(drop=True)
+    x_col_types = check_col_type(train_df)
+    forest = Forest(5, dut.bootstrap_sample, column_names, target_name, x_col_types, STR_CONTINUOUS)
 
     start_time = time.time()
 
