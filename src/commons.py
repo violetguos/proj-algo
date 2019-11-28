@@ -97,18 +97,6 @@ import random # generate random numbers for train test split
 import math # to calculate log2 probabilities
 import numpy as np
 
-def read_pd(fp):
-    """
-    Designed only for iris
-    :param fp:
-    :return:
-    """
-    df = pd.read_csv(fp)
-    df.head()
-    df = df.replace('setosa', 0.0)
-    df = df.replace('versicolor', 1.0)
-    df = df.replace('virginica', 2.0)
-    return df
 
 def split_train_test(df, train=0.60):
     train_size = round(len(df) * train)

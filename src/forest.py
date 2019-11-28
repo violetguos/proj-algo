@@ -68,7 +68,7 @@ class Forest():
             res = tree.predict(X)
             self.res_arr.append(res)
 
-        if self.y_type  == STR_CATEGORICAL:
+        if self.y_type == STR_CATEGORICAL:
             self.res_arr = np.array(self.res_arr)
             self.res_arr = self.res_arr.astype(int)
 
@@ -77,12 +77,11 @@ class Forest():
             for i in range(len(X.index)):
                 # this `[:,i]` array indexing enables us to look at each column
                 # this is the majority count of a 2D matrix in np array format
-
                 counts = np.bincount(self.res_arr[:,i])
                 self.res.append(np.argmax(counts))
         else:
             self.res_arr = np.array(self.res_arr)
-            print("res arr shape", self.res_arr[:,0].shape)
+            # print("res arr shape", self.res_arr[:,0].shape)
             for i in range(len(X.index)):
                 self.res.append(np.mean(self.res_arr[:,i]))
 

@@ -6,7 +6,6 @@ import pandas as pd
 import time
 from src import commons as dut
 import math
-from sklearn.preprocessing import LabelEncoder
 from src.const import STR_CATEGORICAL, STR_CONTINUOUS
 
 def fast_log(x):
@@ -16,7 +15,7 @@ def fast_log(x):
     :return: log_2(x)
     """
     ln_2 = 0.693147
-    ln_x = (x-1) - 0.5 * (x-1)*(x-1) + (x-1)* (x-1)*(x-1)/3 - (x-1)*(x-1)*(x-1)*(x-1) * 0.25
+    ln_x = (x-1) - 0.5 * (x-1)*(x-1) + (x-1)*(x-1)*(x-1)/3 - (x-1)*(x-1)*(x-1)*(x-1) * 0.25 + (x-1)**5 * 0.2
 
     log_2_x = ln_x / ln_2
 
@@ -96,7 +95,7 @@ class Node:
         :param y: the target variable
         :param idxs: the subset at this node's split
         :param min_leaf_count: prevents overfitting
-        :param val: a majority vote based on all the Ys in this node
+        :param val: a majority vote based on all the Ys in this node, or average of y in if it's continuous
         :param label_set: the set of all labels in the dataset, deisgned to adapt to different datasets
         """
         self.x = x
@@ -127,15 +126,17 @@ class Node:
         """
 
         # before trying to split, we see if this node is already pure
+
+        # TODO: put this is find_better_split
         curr_unique = self.y.unique()
         if len(curr_unique) == 1:
             self.score = float('inf')
 
         for c in range(self.col_count):
             self.find_better_split(c)
+
         if self.is_leaf:
             return
-
         # after we found the newest LHS, and RHS, declare the new nodes
         # and store them inside self parameters
         # so we can run a prediction outside the scope by following these pointers
@@ -154,14 +155,14 @@ class Node:
         # print(lhs_unique)
         # print(len(lhs_unique))
         rhs_unique = self.y[split.rhs].unique()
-        if len(lhs_unique) == 1 or len(rhs_unique) == 1:
+        # TRY AND OR OR, write in diffiuculty
+        if len(lhs_unique) == 1 and len(rhs_unique) == 1:
             return True
         else:
             return False
 
     def cat_split(self, var_idx):
 
-        # TODO: use the updated split method instead of a plain recursion
         # print(var_idx)
         unique = self.x.iloc[self.idxs, var_idx].unique()
         # print(unique.size)
@@ -265,7 +266,6 @@ class Node:
         # this generates all the splits
         # splits = self.continuous_split(var_idx)
 
-        #  TODO: still testing cat split
         splits = self.split_method(var_idx)
         #splits = self.cat_split(var_idx)
 
@@ -302,7 +302,6 @@ class Node:
                 self.best_lhs_indices, self.best_rhs_indices = lhs, rhs
 
     def continuous_split(self, var_idx):
-        # TODO: move this under class conti split
         """
         :param var_idx: the current column from def find_better_split(self)
         :return: all possible splits at this
@@ -320,6 +319,7 @@ class Node:
             nan_vals = list()
             for index, col_val in col.items():
                 # this is how you check for the nan values without numpy or pandas
+                # source: https://stackoverflow.com/questions/944700/how-can-i-check-for-nan-values
                 if col_val != col_val:
                     nan_vals.append(index)
                 elif col_val < threshold:
@@ -328,8 +328,12 @@ class Node:
                 else:
                     right.append(index)
         # we try both cases, choose the side where nan is supposed to go by maximizing the split score
-        res.append(SplitContinuous(left + nan_vals, right, threshold))
-        res.append(SplitContinuous(left, right + nan_vals, threshold))
+        # add check if we have missing, if not only one append
+        if len(nan_vals) > 0:
+            res.append(SplitContinuous(left + nan_vals, right, threshold))
+            res.append(SplitContinuous(left, right + nan_vals, threshold))
+        else:
+            res.append(SplitContinuous(left, right, threshold))
         return res
 
     def variance_ssr(self, lhs, rhs):
@@ -453,7 +457,7 @@ class Node:
 
 def main_iris():
     filename = "../../data/iris_data.csv"
-    df = dut.read_pd(filename)
+    df = pd.read_csv(filename)
     print("df", df.iloc[0].isnull())
     # data cleaning
     df = dut.remove_missing_target(df, 'species')
@@ -483,9 +487,8 @@ def main_iris():
 
 def main_adults():
     filename = "../../data/adult.csv"
-    df = dut.read_pd(filename)
+    df = pd.read_csv(filename)
 
-    yencode = LabelEncoder().fit(df["income"])
     train_df, _ = dut.split_train_test(df, train=0.01)
     train_df = train_df.reset_index(drop=True)
 
@@ -536,8 +539,8 @@ def main_continuous():
 
 
 if __name__ == '__main__':
-    main_continuous()
-    # main_adults()
-    # main_iris()
+    # main_continuous()
+    main_adults()
+    main_iris()
 
 
