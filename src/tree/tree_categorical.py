@@ -99,11 +99,14 @@ class Node:
         :param label_set: the set of all labels in the dataset, deisgned to adapt to different datasets
         """
         self.x = x
+        # TODO: change x_data_type to one for each column
         self.x_data_type = x_data_type
         self.y = y
         self.y_data_type = y_data_type
         self.idxs = idxs
-        self.split_method = self.cat_split if x_data_type == STR_CATEGORICAL else self.continuous_split
+
+        # can delete this
+        # self.split_method = self.cat_split if x_data_type == STR_CATEGORICAL else self.continuous_split
 
 
         self.min_leaf_count = min_leaf_count
@@ -264,14 +267,18 @@ class Node:
         # this generates all the splits
         # splits = self.continuous_split(var_idx)
 
-        splits = self.split_method(var_idx)
-        #splits = self.cat_split(var_idx)
+        # TODO: change 0 to var idx
+        if self.x_data_type[var_idx] == STR_CONTINUOUS:
+            splits = self.continuous_split(var_idx)
+        # splits = self.split_method(var_idx)
+        else:
+
+            splits = self.cat_split(var_idx)
 
         if splits is None:
             # no more split in categorical X variable
             self.score = float('inf')
             return
-
 
         # while not res
         # iter in list of splits
@@ -340,22 +347,6 @@ class Node:
         lhs_std = y_select[lhs].std()
         rhs_std = y_select[rhs].std()
         return lhs_std * len(lhs) + rhs_std * len(rhs)
-
-
-        # y_select = self.y.iloc[self.idxs]
-        # # print(type(self.idxs))
-        # mean_target_group1 = y_select[lhs].mean()
-        #
-        # len_group1 = len(lhs)
-        # mean_target_group2 = y_select[rhs].mean()
-        # len_group2 = len(rhs)
-        # # print(type(np.array(lhs)))
-        # # assert(np.array(lhs) in self.idxs)
-        # # assert(rhs in self.idxs)
-        #
-        # mean_y = y_select.mean()
-        # variance_SSR = len_group1 * (mean_target_group1 - mean_y)**2 + len_group2 * (mean_target_group2 - mean_y)**2
-        # return variance_SSR
 
     def find_score(self, split, func='entropy'):
         if self.y_data_type == STR_CONTINUOUS:
@@ -438,13 +429,14 @@ class Node:
         if self.is_leaf:
             return self.val
         # else, recurse left and right from current node
-        if self.x_data_type == STR_CATEGORICAL:
+        # TODO: predict needs a list of col data types
+        if self.x_data_type[self.var_idx] == STR_CATEGORICAL:
             if row[self.var_idx] in self.split.lhs_vals:
                 node = self.lhs
             else:
                 node = self.rhs
             return node.predict_row_helper(row)
-        elif self.x_data_type == STR_CONTINUOUS:
+        elif self.x_data_type[self.var_idx] == STR_CONTINUOUS:
 
             if row[self.var_idx] < self.split.threshold:
                 node = self.lhs
@@ -453,10 +445,22 @@ class Node:
             return node.predict_row_helper(row)
 
 
+def check_col_type(cols, df):
+    col_types = []
+    for idx in cols:
+        col = df[idx]
+        if np.issubdtype(col.dtype, np.number):
+            col_types.append(STR_CONTINUOUS)
+        else:
+            col_types.append(STR_CATEGORICAL)
+    return col_types
+
+
+
+
 def main_iris():
     filename = "../../data/iris_data.csv"
     df = pd.read_csv(filename)
-    print("df", df.iloc[0].isnull())
     # data cleaning
     df = dut.remove_missing_target(df, 'species')
 
@@ -466,11 +470,12 @@ def main_iris():
     test_df = test_df.reset_index(drop=True)
     X = train_df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
     y = train_df["species"]
-    print(X)
 
+    x_col_types = check_col_type(["sepal_length", "sepal_width", "petal_length", "petal_width"], train_df)
+    print(x_col_types)
     start_time = time.time()
 
-    regressor = DecisionTree().fit(X, STR_CONTINUOUS, y, STR_CATEGORICAL, range(3))
+    regressor = DecisionTree().fit(X, x_col_types, y, STR_CATEGORICAL, range(3))
     X = test_df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
     actual = test_df["species"]
     preds = regressor.predict(X)
@@ -492,8 +497,10 @@ def main_adults():
 
     X = train_df[["workclass","marital.status","relationship","race","sex"]]
     y = train_df["income"]
-    # print(X)
-    regressor = DecisionTree().fit(X, STR_CATEGORICAL, y, STR_CATEGORICAL, range(2))
+
+    x_col_types = check_col_type(["workclass","marital.status",  "education.num", "relationship","race","sex"], train_df)
+    print(x_col_types)
+    regressor = DecisionTree().fit(X, x_col_types, y, STR_CATEGORICAL, range(2))
 
     # hack the funciton to run on a subset
     test_df, _ = dut.split_train_test(df, train=0.01)
@@ -521,14 +528,17 @@ def main_continuous():
     column_names = ['CRIM', 'ZN', 'INDUS', 'CHAS', 'NOX', 'RM', 'AGE', 'DIS', 'RAD', 'TAX', 'PTRATIO', 'B', 'LSTAT']
     X = train_df[column_names]
     y = train_df["MEDV"]
-
+    x_col_types = check_col_type(column_names, train_df)
+    print("check_col_type", x_col_types)
     start_time = time.time()
 
-    regressor = DecisionTree().fit(X, STR_CONTINUOUS, y, STR_CONTINUOUS, None, min_leaf=20)
+    regressor = DecisionTree().fit(X, x_col_types, y, STR_CONTINUOUS, None, min_leaf=20)
+
+
     X = test_df[column_names]
     y = test_df["MEDV"]
     preds = regressor.predict(X)
-
+    print("preds")
     acc = dut.mse_metric(y.values, preds)
     print("acc", acc)
     # print(y.values)
@@ -538,12 +548,12 @@ def main_continuous():
 
 if __name__ == '__main__':
 
-    main_continuous()
-    print("*"*20)
-    print(" "*20)
+    # main_continuous()
+    # print("*"*20)
+    # print(" "*20)
     main_adults()
-    print("*"*20)
-    print(" "*20)
-    main_iris()
+    # print("*"*20)
+    # print(" "*20)
+    # main_iris()
 
 

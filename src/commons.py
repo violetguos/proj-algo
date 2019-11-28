@@ -144,4 +144,3 @@ def column_sample(df, sample=1.0):
             i = i+1
     return df.iloc[:,index] # return df rows that correspond to the random sample + reset index
 
-
