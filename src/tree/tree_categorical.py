@@ -126,14 +126,12 @@ class Node:
         """
 
         # before trying to split, we see if this node is already pure
-
-        # TODO: put this is find_better_split
         curr_unique = self.y.unique()
         if len(curr_unique) == 1:
             self.score = float('inf')
-
-        for c in range(self.col_count):
-            self.find_better_split(c)
+        else:
+            for c in range(self.col_count):
+                self.find_better_split(c)
 
         if self.is_leaf:
             return
@@ -533,14 +531,19 @@ def main_continuous():
 
     acc = dut.mse_metric(y.values, preds)
     print("acc", acc)
-    print(y.values)
-    print(len(preds))
+    # print(y.values)
+    # print(len(preds))
     print("--- %s seconds ---" % (time.time() - start_time))
 
 
 if __name__ == '__main__':
-    # main_continuous()
+
+    main_continuous()
+    print("*"*20)
+    print(" "*20)
     main_adults()
+    print("*"*20)
+    print(" "*20)
     main_iris()
 
 

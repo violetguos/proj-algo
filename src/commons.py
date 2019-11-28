@@ -1,5 +1,3 @@
-# plots, and other functions
-# TODO: plot the runtime with different functions, with threading, etc
 from csv import reader
 from random import randrange
 import numpy as np
