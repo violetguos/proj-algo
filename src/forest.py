@@ -53,11 +53,19 @@ class Forest():
         for i in range(self.tree_num):
             df_subset = self.sampler(df, sample=0.9)
             # df_subset = df
-            X = dut.column_sample(df_subset)
+            col_indices = dut.column_sample(df_subset[self.column_names])
+            # print(df_subset.iloc[:, 0])
+            x_type = check_col_type(df_subset)
+            x_type = x_type[0:-1]
+            print(col_indices)
+            X = df_subset
+            # X = df_subset.iloc[:, col_indices].reset_index(drop=True)
+            # print(X.iloc[:, 0])
+            print(col_indices)
+
             # X = df_subset[self.column_names]
             y = df_subset[self.target_name]
-            x_type = check_col_type(X)
-            tree = DecisionTree().fit(X, x_type, y, self.y_type, range(3),  min_leaf=20)
+            tree = DecisionTree().fit(X, x_type, col_indices, y, self.y_type, range(3),  min_leaf=5)
             self.tree_arr.append(tree)
 
     def predict(self, X):
@@ -108,7 +116,7 @@ def main():
     test_df = test_df.reset_index(drop=True)
 
     start_time = time.time()
-    forest = Forest(50, dut.bootstrap_sample, column_names, target_name, x_col_types, STR_CATEGORICAL)
+    forest = Forest(10, dut.bootstrap_sample, column_names, target_name, x_col_types, STR_CATEGORICAL)
 
     forest.fit(train_df)
 
@@ -136,7 +144,7 @@ def main_conti():
 
     test_df = test_df.reset_index(drop=True)
     x_col_types = check_col_type(train_df)
-    forest = Forest(5, dut.bootstrap_sample, column_names, target_name, x_col_types, STR_CONTINUOUS)
+    forest = Forest(10, dut.bootstrap_sample, column_names, target_name, x_col_types, STR_CONTINUOUS)
 
     start_time = time.time()
 

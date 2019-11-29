@@ -8,6 +8,9 @@ from src import commons as dut
 import math
 from src.const import STR_CATEGORICAL, STR_CONTINUOUS
 
+#TODO: look up table of var_idx
+
+
 def fast_log(x):
     """
     Tayloer series
@@ -39,10 +42,10 @@ def merge_list(l1, l2):
         merged_list = [l1] + [l2]
     return merged_list
 
-class DecisionTree:
 
-    def fit(self, X, x_type, y, y_type, label_set, min_leaf=5):
-        self.dtree = Node(X, x_type, y, y_type, np.array(np.arange(len(y))), label_set, min_leaf)
+class DecisionTree:
+    def fit(self, X, x_type, col_indices, y, y_type, label_set, min_leaf=5):
+        self.dtree = Node(X, x_type, col_indices, y, y_type, np.array(np.arange(len(y))), label_set, min_leaf)
         return self
 
     def predict(self, X):
@@ -88,7 +91,7 @@ class SplitCategorical:
 
 class Node:
 
-    def __init__(self, x, x_data_type, y, y_data_type, idxs, label_set, min_leaf_count=5):
+    def __init__(self, x, x_data_type, col_indices, y, y_data_type, idxs, label_set, min_leaf_count=5):
 
         """
         :param x: data column
@@ -105,14 +108,14 @@ class Node:
         self.y_data_type = y_data_type
         # row idxs
         self.idxs = idxs
-
+        self.col_indices = col_indices
         # can delete this
         # self.split_method = self.cat_split if x_data_type == STR_CATEGORICAL else self.continuous_split
 
 
         self.min_leaf_count = min_leaf_count
         self.row_count = len(idxs)
-        self.col_count = len(list(x.columns))
+        self.col_count = len(col_indices)
         self.val = y[idxs].mode()[0] if y_data_type == STR_CATEGORICAL else np.mean(y[idxs])
         self.score = float('inf')
         self.label_set = label_set
@@ -134,7 +137,7 @@ class Node:
         if len(curr_unique) == 1:
             self.score = float('inf')
         else:
-            for c in range(self.col_count):
+            for c in self.col_indices:
                 self.find_better_split(c)
 
         if self.is_leaf:
@@ -142,8 +145,8 @@ class Node:
         # after we found the newest LHS, and RHS, declare the new nodes
         # and store them inside self parameters
         # so we can run a prediction outside the scope by following these pointers
-        self.lhs = Node(self.x, self.x_data_type, self.y, self.y_data_type, self.best_lhs_indices, self.label_set)
-        self.rhs = Node(self.x, self.x_data_type, self.y, self.y_data_type, self.best_rhs_indices, self.label_set)
+        self.lhs = Node(self.x, self.x_data_type, self.col_indices, self.y, self.y_data_type, self.best_lhs_indices, self.label_set)
+        self.rhs = Node(self.x, self.x_data_type, self.col_indices, self.y, self.y_data_type, self.best_rhs_indices, self.label_set)
 
     def find_pure_in_splits(self, split):
         """
@@ -269,6 +272,8 @@ class Node:
         # splits = self.continuous_split(var_idx)
 
         # TODO: change 0 to var idx
+        # print(var_idx, "var_idx")
+        # print(self.x_data_type)
         if self.x_data_type[var_idx] == STR_CONTINUOUS:
             splits = self.continuous_split(var_idx)
         # splits = self.split_method(var_idx)
@@ -314,6 +319,8 @@ class Node:
         """
         # this handles some indexing exceptions
         # no longer happens as of commit PR #2
+        # print("var_idx", var_idx)
+        # print("self.x\n", self.x)
         col = self.x.iloc[self.idxs, var_idx]
 
         unique = col.unique()
@@ -417,6 +424,7 @@ class Node:
         # predict row by row
         res = []
         for row in x:
+            # row_subset = x[i:, self.col_indices] #.reset_index(drop=True)
             res.append(self.predict_row_helper(row))
         return np.array(res)
 
@@ -435,16 +443,20 @@ class Node:
             if row[self.var_idx] in self.split.lhs_vals:
                 node = self.lhs
             else:
+                # elif row[self.var_idx] in self.split.rhs_vals:
                 node = self.rhs
             return node.predict_row_helper(row)
         elif self.x_data_type[self.var_idx] == STR_CONTINUOUS:
 
             if row[self.var_idx] < self.split.threshold:
                 node = self.lhs
-            else:
+            elif row[self.var_idx] >= self.split.threshold:
                 node = self.rhs
             return node.predict_row_helper(row)
 
+
+    def print(self):
+        pass
 
 def check_col_type(df):
     cols = list(df.columns)
@@ -456,8 +468,6 @@ def check_col_type(df):
         else:
             col_types.append(STR_CATEGORICAL)
     return col_types
-
-
 
 
 def main_iris():
@@ -535,7 +545,6 @@ def main_continuous():
     start_time = time.time()
 
     regressor = DecisionTree().fit(X, x_col_types, y, STR_CONTINUOUS, None, min_leaf=20)
-
 
     X = test_df[column_names]
     y = test_df["MEDV"]

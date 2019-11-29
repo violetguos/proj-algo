@@ -134,15 +134,15 @@ def bootstrap_sample(df, sample=1.0):
 
 
 # Select a random sample of the columns (columns cannot repeat, so sampling without replacement)
-def column_sample(df, sample=0.9):
+def column_sample(df, sample=0.6):
     index=[]
     i = 0
-    print("df.shape[1]", type(df.shape[1]))
+    print("df.shape[1]", df.shape[1])
     while i < round(df.shape[1] * sample): # for number of columns in df x sample %
         index_to_add = my_randrange(df.shape[1]) # random number (number of columns)
         if index_to_add not in index: # don't add a column if it's already in the sample
             index.append(index_to_add)
-        i = i+1
-    print("index", index)
-    return df.iloc[:,index].reset_index(drop=True) #, np.array(x_types)[index] # return df rows that correspond to the random sample + reset index
+            i = i + 1
+    index.sort()
+    return index #, np.array(x_types)[index] # return df rows that correspond to the random sample + reset index
 
