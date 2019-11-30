@@ -8,8 +8,6 @@ from src import commons as dut
 import math
 from src.const import STR_CATEGORICAL, STR_CONTINUOUS
 
-#TODO: look up table of var_idx
-
 
 def fast_log(x):
     """
@@ -19,7 +17,6 @@ def fast_log(x):
     """
     ln_2 = 0.693147
     ln_x = (x-1) - 0.5 * (x-1)*(x-1) + (x-1)*(x-1)*(x-1)/3 - (x-1)*(x-1)*(x-1)*(x-1) * 0.25 + (x-1)**5 * 0.2
-
     log_2_x = ln_x / ln_2
 
     return log_2_x
@@ -44,8 +41,8 @@ def merge_list(l1, l2):
 
 
 class DecisionTree:
-    def fit(self, X, x_type, col_indices, y, y_type, label_set, min_leaf=5):
-        self.dtree = Node(X, x_type, col_indices, y, y_type, np.array(np.arange(len(y))), label_set, min_leaf)
+    def fit(self, X, x_type, col_indices, y, y_type, label_set, min_leaf=5, func='gini'):
+        self.dtree = Node(X, x_type, col_indices, y, y_type, np.array(np.arange(len(y))), label_set, min_leaf, func=func)
         return self
 
     def predict(self, X):
@@ -91,7 +88,7 @@ class SplitCategorical:
 
 class Node:
 
-    def __init__(self, x, x_data_type, col_indices, y, y_data_type, idxs, label_set, min_leaf_count=5):
+    def __init__(self, x, x_data_type, col_indices, y, y_data_type, idxs, label_set, min_leaf_count=5, func='gini'):
 
         """
         :param x: data column
@@ -119,7 +116,7 @@ class Node:
         self.val = y[idxs].mode()[0] if y_data_type == STR_CATEGORICAL else np.mean(y[idxs])
         self.score = float('inf')
         self.label_set = label_set
-
+        self.func = func
 
         # this method is automatically called when we declare a node.
         # only a short hand notation
@@ -356,15 +353,15 @@ class Node:
         rhs_std = y_select[rhs].std()
         return lhs_std * len(lhs) + rhs_std * len(rhs)
 
-    def find_score(self, split, func='entropy'):
+    def find_score(self, split):
         if self.y_data_type == STR_CONTINUOUS:
             return self.variance_ssr(split.lhs, split.rhs)
 
-        if func == 'gini':
+        if self.func == 'gini':
             # print("cateogorical split on the Y, {}".format(func))
             return self.gini(split)
-        elif func == 'entropy':
-            # print("cateogorical split on the Y, {}".format(func))
+        elif self.func == 'entropy':
+            # print("cateogorical split on the Y, {}".format(self.func))
 
             return self.entropy(split)
 
@@ -389,7 +386,7 @@ class Node:
                 entropy = 0
                 for p in pk:
                     if p != 0:
-                        entropy += p * fast_log(p)  # math.log2(p)
+                        entropy += p * math.log2(p)#fast_log(p)  # math.log2(p)
                 entropy = -1 * entropy
             two_subtrees_entropy += entropy
 
@@ -543,8 +540,8 @@ def main_continuous():
     x_col_types = check_col_type(train_df)
     print("check_col_type", x_col_types)
     start_time = time.time()
-
-    regressor = DecisionTree().fit(X, x_col_types, y, STR_CONTINUOUS, None, min_leaf=20)
+    col_indices = dut.column_sample(train_df[column_names], sample=1.0)
+    regressor = DecisionTree().fit(X, x_col_types, col_indices, y, STR_CONTINUOUS, None, min_leaf=20, func='gini')
 
     X = test_df[column_names]
     y = test_df["MEDV"]
@@ -562,9 +559,9 @@ if __name__ == '__main__':
     main_continuous()
     # print("*"*20)
     # print(" "*20)
-    main_adults()
+    # main_adults()
     # print("*"*20)
     # print(" "*20)
-    main_iris()
+    # main_iris()
 
 

@@ -10,7 +10,7 @@ import pandas as pd
 from src.const import STR_CATEGORICAL, STR_CONTINUOUS
 
 class Forest():
-    def __init__(self, tree_num, sampler, column_names, target_name, x_type, y_type):
+    def __init__(self, tree_num, sampler, column_names, target_name, x_type, y_type, func='entropy'):
         """
         :param tree_num: this defined how many trees we train in a RF algo
         :param tree_arr: this stores a list root nodes to trees in the forsest
@@ -41,6 +41,7 @@ class Forest():
         self.target_name = target_name
         self.x_type = x_type
         self.y_type = y_type
+        self.func = func
 
     def fit(self, df):
         """
@@ -53,7 +54,7 @@ class Forest():
         for i in range(self.tree_num):
             df_subset = self.sampler(df, sample=0.9)
             # df_subset = df
-            col_indices = dut.column_sample(df_subset[self.column_names])
+            col_indices = dut.column_sample(df_subset[self.column_names], sample=1.0)
             # print(df_subset.iloc[:, 0])
             x_type = check_col_type(df_subset)
             x_type = x_type[0:-1]
@@ -65,7 +66,7 @@ class Forest():
 
             # X = df_subset[self.column_names]
             y = df_subset[self.target_name]
-            tree = DecisionTree().fit(X, x_type, col_indices, y, self.y_type, range(3),  min_leaf=5)
+            tree = DecisionTree().fit(X, x_type, col_indices, y, self.y_type, range(3),  min_leaf=5, func=self.func)
             self.tree_arr.append(tree)
 
     def predict(self, X):
@@ -116,7 +117,7 @@ def main():
     test_df = test_df.reset_index(drop=True)
 
     start_time = time.time()
-    forest = Forest(10, dut.bootstrap_sample, column_names, target_name, x_col_types, STR_CATEGORICAL)
+    forest = Forest(100, dut.bootstrap_sample, column_names, target_name, x_col_types, STR_CATEGORICAL, func='entropy')
 
     forest.fit(train_df)
 
