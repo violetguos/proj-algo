@@ -268,9 +268,7 @@ class Node:
         # this generates all the splits
         # splits = self.continuous_split(var_idx)
 
-        # TODO: change 0 to var idx
-        # print(var_idx, "var_idx")
-        # print(self.x_data_type)
+
         if self.x_data_type[var_idx] == STR_CONTINUOUS:
             splits = self.continuous_split(var_idx)
         # splits = self.split_method(var_idx)
@@ -479,12 +477,13 @@ def main_iris():
     test_df = test_df.reset_index(drop=True)
     X = train_df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
     y = train_df["species"]
-
+    num_y = y.unique()
     x_col_types = check_col_type(train_df)
     print(x_col_types)
     start_time = time.time()
+    col_idx = dut.column_sample(X, 1.0)
 
-    regressor = DecisionTree().fit(X, x_col_types, y, STR_CATEGORICAL, range(3))
+    regressor = DecisionTree().fit(X, x_col_types, col_idx, y, STR_CATEGORICAL, num_y)
     X = test_df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
     actual = test_df["species"]
     preds = regressor.predict(X)
@@ -506,10 +505,12 @@ def main_adults():
 
     X = train_df[["workclass","marital.status","relationship","race","sex"]]
     y = train_df["income"]
+    col_idx = dut.column_sample(X, 1.0)
+    num_y = y.unique()
 
     x_col_types = check_col_type(train_df)
     print(x_col_types)
-    regressor = DecisionTree().fit(X, x_col_types, y, STR_CATEGORICAL, range(2))
+    regressor = DecisionTree().fit(X, x_col_types,col_idx, y, STR_CATEGORICAL, num_y)
 
     # hack the funciton to run on a subset
     test_df, _ = dut.split_train_test(df, train=0.01)
@@ -557,11 +558,11 @@ def main_continuous():
 if __name__ == '__main__':
 
     main_continuous()
-    # print("*"*20)
-    # print(" "*20)
-    # main_adults()
-    # print("*"*20)
-    # print(" "*20)
-    # main_iris()
+    print("*"*20)
+    print(" "*20)
+    main_adults()
+    print("*"*20)
+    print(" "*20)
+    main_iris()
 
 

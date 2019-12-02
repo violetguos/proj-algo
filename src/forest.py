@@ -43,7 +43,7 @@ class Forest():
         self.y_type = y_type
         self.func = func
 
-    def fit(self, df):
+    def fit(self, df, labels=range(3)):
         """
         For each tree, calls Node.fit
         :param X: we need to work on subsample here
@@ -53,20 +53,13 @@ class Forest():
 
         for i in range(self.tree_num):
             df_subset = self.sampler(df, sample=0.9)
-            # df_subset = df
-            col_indices = dut.column_sample(df_subset[self.column_names], sample=1.0)
-            # print(df_subset.iloc[:, 0])
+            col_indices = dut.column_sample(df_subset[self.column_names], sample=0.6)
             x_type = check_col_type(df_subset)
             x_type = x_type[0:-1]
             print(col_indices)
             X = df_subset
-            # X = df_subset.iloc[:, col_indices].reset_index(drop=True)
-            # print(X.iloc[:, 0])
-            print(col_indices)
-
-            # X = df_subset[self.column_names]
             y = df_subset[self.target_name]
-            tree = DecisionTree().fit(X, x_type, col_indices, y, self.y_type, range(3),  min_leaf=5, func=self.func)
+            tree = DecisionTree().fit(X, x_type, col_indices, y, self.y_type, labels,  min_leaf=5, func=self.func)
             self.tree_arr.append(tree)
 
     def predict(self, X):
@@ -83,8 +76,6 @@ class Forest():
             self.res_arr = np.array(self.res_arr)
             # self.res_arr = self.res_arr.astype(int)
 
-            # TODO: potential discuss how to speed this up
-            # can try  prof's array indexing tricks??
             for i in range(len(X.index)):
                 # this `[:,i]` array indexing enables us to look at each column
                 # this is the majority count of a 2D matrix in np array format
@@ -117,7 +108,7 @@ def main():
     test_df = test_df.reset_index(drop=True)
 
     start_time = time.time()
-    forest = Forest(100, dut.bootstrap_sample, column_names, target_name, x_col_types, STR_CATEGORICAL, func='entropy')
+    forest = Forest(50, dut.bootstrap_sample, column_names, target_name, x_col_types, STR_CATEGORICAL, func='entropy')
 
     forest.fit(train_df)
 
@@ -164,5 +155,5 @@ def main_conti():
 
 
 if __name__ == '__main__':
-    # main()
+    main()
     main_conti()

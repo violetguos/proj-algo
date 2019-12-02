@@ -88,14 +88,6 @@ def gen_confusion_matrix(true, pred):
         result[true_i[i]][pred_i[i]] += 1  # add + 1 to the combination
     return result, np.unique(true)
 
-# utility functions in the oct 13 notebook
-
-import pandas as pd # to read the csv
-import random # generate random numbers for train test split
-import math # to calculate log2 probabilities
-import numpy as np
-
-
 def split_train_test(df, train=0.60):
     train_size = round(len(df) * train)
     train_indices = random.sample(population=df.index.tolist(), k=train_size)
