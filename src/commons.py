@@ -15,42 +15,9 @@ def load_csv(filename):
             dataset.append(row)
     return dataset
 
-
-# Convert string column to float
-def str_column_to_float(dataset, column):
-    for row in dataset:
-        row[column] = float(row[column].strip())
-
-
-# Convert string column to integer
-def str_column_to_int(dataset, column):
-    class_values = [row[column] for row in dataset]
-    unique = set(class_values)
-    lookup = dict()
-    for i, value in enumerate(unique):
-        lookup[value] = i
-    for row in dataset:
-        row[column] = lookup[row[column]]
-    return lookup
-
-
-# Split a dataset into k folds
-def cross_validation_split(dataset, n_folds):
-    dataset_split = list()
-    dataset_copy = list(dataset)
-    fold_size = int(len(dataset) / n_folds)
-    for i in range(n_folds):
-        fold = list()
-        while len(fold) < fold_size:
-            index = randrange(len(dataset_copy))
-            fold.append(dataset_copy.pop(index))
-        dataset_split.append(fold)
-    return dataset_split
-
 # Calculate accuracy percentage
 def mse_metric(actual, predicted):
     correct = 0
-    print(len(actual))
     for i in range(len(actual)):
         correct += (actual[i] - predicted[i]) ** 2
     return correct / len(actual)
@@ -106,14 +73,6 @@ def remove_missing_target(df, target):
 
 def my_randrange(n): # starts at 0 included ends at n-1 included
     return int(random.random()* n // 1) # returns floor of random(0,1) * n
-
-
-# Function to generate a random sample of n observations from the data set (random sample with replacement)
-def bootstrap(df):
-    index=[]
-    for i in range(0,len(df)):# for number of rows in df:
-        index.append(my_randrange(len(df))) # generate boostrap indexes
-    return df.iloc[index].reset_index(drop=True) # return df rows that correspond to the random sample + reset index
 
 
 # Alternate function that allows to change the sampling percentage

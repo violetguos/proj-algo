@@ -145,8 +145,6 @@ def main_conti():
     X = test_df[column_names]
     actual = test_df["MEDV"]
     preds = forest.predict(X)
-    print("preds", preds)
-    print("actual", actual.values)
     print("--- %s seconds ---" % (time.time() - start_time))
 
     accuracy = dut.mse_metric(actual.values, preds)
@@ -155,5 +153,5 @@ def main_conti():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
     main_conti()

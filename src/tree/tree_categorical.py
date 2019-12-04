@@ -384,7 +384,7 @@ class Node:
                 entropy = 0
                 for p in pk:
                     if p != 0:
-                        entropy += p * math.log2(p)#fast_log(p)  # math.log2(p)
+                        entropy += p * fast_log(p)  # math.log2(p)
                 entropy = -1 * entropy
             two_subtrees_entropy += entropy
 
@@ -483,7 +483,7 @@ def main_iris():
     start_time = time.time()
     col_idx = dut.column_sample(X, 1.0)
 
-    regressor = DecisionTree().fit(X, x_col_types, col_idx, y, STR_CATEGORICAL, num_y)
+    regressor = DecisionTree().fit(X, x_col_types, col_idx, y, STR_CATEGORICAL, num_y, func='entropy')
     X = test_df[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
     actual = test_df["species"]
     preds = regressor.predict(X)
